@@ -1,0 +1,369 @@
+diff --git a/language/parser.js b/language/parser.js
+index 6e42873..9f00f80 100644
+--- a/language/parser.js
++++ b/language/parser.js
+@@ -8,7 +8,7 @@ if (typeof exports === "undefined")
+ 
+ function Parser(grammar)
+ {
+-    var ast = parse(language_table, grammar);
++    var ast = parse(language_table, grammar, 0);
+ 
+     this.table = exports.build_table(build(ast));
+ }
+@@ -16,18 +16,8 @@ function Parser(grammar)
+ exports.Parser = Parser;
+ 
+ Parser.prototype.parse = function(input)
+-{
+-    return parse(this.table, input);
+-}
+-
+-function parse(table, input)
+-{
+-    var c = new context(input),
+-        node = new SyntaxNode("#document", c.input, 0, 0);
+-
+-    console.log("result: " + evaluate(c, node, table, 0));
+-
+-    return node;
++{next = true;
++    return parse(this.table, input, 0);
+ }
+ 
+ var NAME                = 0,
+@@ -43,159 +33,192 @@ var NAME                = 0,
+     POSITIVE_LOOK_AHEAD = 10,
+     __REFERENCE         = 11;
+ 
+-function context(input)
+-{
+-    this.position = 0;
+-    this.input = input;
+-}
+-
+-function evaluate(context, parent, rules, rule_id)
+-{
+-    var rule = rules[rule_id],
+-        type = rule[0],
+-        input_length = context.input.length;
+-
+-    switch (type)
++// We need three possible results: SUCCESS, FAILURE, and ADVANCE
++// This is because sometimes a previous SUCCESS means SUCCESS
++// (as is the case with ORDERED_CHOICE), but other times means
++// ADVANCE (as is the case with SEQUENCE).
++
++var FAILURE = 0,
++    SUCCESS = 1,
++    ADVANCE = 2;
++var next = false;
++function parse(table, input, id)
++{    
++    var start = new SyntaxNode("#document", input, position, input.length),
++        stack = [],
++        sp = 0,
++        state = 2,
++        position = 0,
++        inputLength = input.length,
++        children = start.children,
++        result = ADVANCE;
++
++    var repeats = 0,
++        total = 0,
++        did_it = { };
++
++    do
+     {
+-        case NAME:
+-            var node = new SyntaxNode(rule[1], context.input, context.position);
+-            if (!evaluate(context, node, rules, rule[2]))
+-                return false;
+-            node.range.length = context.position - node.range.location;
+-            if (parent)
+-                parent.children.push(node);
+-            return true;
+-
+-        case CHARACTER_CLASS:
+-            var character = context.input.charAt(context.position);
+-            // ? if (typeof rule[1] === "function")
+-            if (character.match(rule[1]))
+-            {
+-                if (parent)
+-                    parent.children.push(character);
+-                ++context.position;
+-                return true;
+-            }
+-            return false;
+-
+-        case SEQUENCE:
+-            var index = 1,
+-                count = rule.length;
+-
+-            for (; index < count; ++index)
+-                if (!evaluate(context, parent, rules, rule[index]))
+-                    return false;
+-
+-            return true;
+-
+-        case ORDERED_CHOICE:
+-            var index = 1,
+-                count = rule.length,
+-                position = context.position;
+-
+-            for (; index < count; ++index)
+-            {
+-                // cache opportunity here.
+-                var child_count = parent && parent.children.length;
+-
+-                if (evaluate(context, parent, rules, rule[index]))
+-                    return true;
+-
+-                if (parent)
+-                    parent.children.length = child_count;
+-                context.position = position;
+-            }
+-            return false;
+-
+-        case STRING_LITERAL:
+-            var string = rule[1],
+-                string_length = string.length;
+-
+-            if (string_length + context.position > input_length)
+-                return false;
++    //console.log("[" + result + "] " + table[id].toString().substr(0, 10));
++        if (result === ADVANCE)
++        {
++            ++total;
+ 
+-            var index = 0;
++            if (did_it[id + " " + position])
++                ++repeats;
++            else
++                did_it[id + " " + position] = true;
++        }
++        //if (next && result === ADVANCE) console.log("id: " + id + " " + table[id].toString().substr(0, 30) + " " + position);
++        var rule = table[id],
++            type = rule[0];
+ 
+-            for (; index < string_length; ++context.position, ++index)
+-                if (context.input.charAt(context.position) !== string.charAt(index))
++        switch (type)
++        {
++            case NAME:
++                if (result === FAILURE)
++                    break;
++    
++                if (result === ADVANCE)
+                 {
+-                    context.position -= index;
+-                    return false;
++                    state = 2;
++                    var node = new SyntaxNode(rule[1], input, position, 0);
++
++                    if (children)
++                        children.push(node);
++                    children = node.children;
++                    children.name = rule[1];
++                    children.range = node.range; // yuck
+                 }
++    
++                if (result === SUCCESS)
++                {
++                    var range = children.range;
++                    range.length = position - range.location;
++                }
++                break;
++    
++            case ORDERED_CHOICE:
++                if (result !== SUCCESS)
++                    result = state >= rule.length ? FAILURE : ADVANCE;
++    
++                break;
++    
++            case SEQUENCE:
++                if (result !== FAILURE)
++                    result = state >= rule.length ? SUCCESS : ADVANCE;
++                
++                break;
++    
++            case ONE_OR_MORE:
++                if (result === FAILURE)
++                    result = state >= 100 ? SUCCESS : FAILURE;
++                else if (result === SUCCESS)
++                {
++                    state = 100;
++                    result = ADVANCE;
++                }
++                break;
++    
++            case ZERO_OR_MORE:
++                // Keep going until we fail.
++                state = 1;
++                result = (result === FAILURE ? SUCCESS : ADVANCE);
++    
++                break;
++    
++            case OPTIONAL:
++                if (result !== ADVANCE)
++                    result = SUCCESS;
++    
++                break;
++
++            case POSITIVE_LOOK_AHEAD:
++                break;
++            case NEGATIVE_LOOK_AHEAD:
++                if (result !== ADVANCE)
++                    result = (result === SUCCESS) ? FAILURE : SUCCESS;
++                break;
++            case DOT:
++                if (position < inputLength)
++                {
++                    result = SUCCESS;
++    
++                    if (children)
++                        children.push(input.charAt(position));            
++                    ++position;
++                }
++                else
++                    result = FAILURE;
++                break;
++            case CHARACTER_CLASS:
++                var character = input.charAt(position);
++                if (character.match(rule[1]))
++                {
++                    if (children)
++                        children.push(character);
++                    ++position;
++                    result = SUCCESS;
++                }
++                else
++                    result = FAILURE;
++                break;
++            default:
++                var string = rule[1],
++                    stringLength = string.length;
++    
++                if (stringLength + position > inputLength)
++                {
++                    result = FAILURE;
++                    break;
++                }
++                var index = 0;
++                result = SUCCESS;
++                for (; index < stringLength; ++position, ++index)
++                    if (input.charCodeAt(position) !== string.charCodeAt(index))
++                    {
++                        result = FAILURE;
++                        position -= index;//necessary?
++                        break;
++                    }
++
++                if (children && result === SUCCESS)
++                    children.push(string);
++        }
++//    console.log(start);
++        if (result === ADVANCE)
++        {
++            stack[sp++] = {
++                id:id,
++                state:state + 1,
++                position:position,
++                children:children,
++                childCount:children.length
++            };
++if (rule[0] === ONE_OR_MORE) state = 1;
++            id = rule[state];
++            state = 1;
++        }
++        else
++        {
++            var frame = stack[--sp];//stack.pop();
+ 
+-            if (parent)
+-                parent.children.push(string);
+-
+-            return true;
+-        case DOT:
+-            if (context.position < input_length)
+-            {
+-                if (parent)
+-                    parent.children.push(context.input.charAt(context.position));
+-                ++context.position;
+-                return true;
+-            }
+-            return false;
+-        case POSITIVE_LOOK_AHEAD:
+-        case NEGATIVE_LOOK_AHEAD:
+-            var position = context.position,
+-                result = evaluate(context, null, rules, rule[1]) === (type === POSITIVE_LOOK_AHEAD);
+-            context.position = position;
+-            return result;
+-
+-        case ZERO_OR_MORE:
+-            var child,
+-                position = context.position,
+-                childCount = parent && parent.children.length;
+-
+-            while (evaluate(context, parent, rules, rule[1]))
+-            {
+-                position = context.position,
+-                childCount = parent && parent.children.length;
+-            }
+-
+-            context.position = position;
+-            if (parent)
+-                parent.children.length = childCount;
+-
+-            return true;
+-
+-        case ONE_OR_MORE:
+-            var position = context.position,
+-                childCount = parent && parent.children.length;
+-            if (!evaluate(context, parent, rules, rule[1]))
+-            {
+-                context.position = position;
+-                if (parent)
+-                    parent.children.length = childCount;
+-                return false;
+-            }
+-            position = context.position,
+-            childCount = parent && parent.children.length;
+-            while (evaluate(context, parent, rules, rule[1]))
+-            {
+-                position = context.position;
+-                childCount = parent && parent.children.length;
+-            }
+-            context.position = position;
+-            if (parent)
+-                parent.children.length = childCount;
+-            return true;
+-
+-        case OPTIONAL:
+-            var position = context.position,
+-                childCount = parent && parent.children.length;
++            id = frame.id;
++            state = frame.state;
++            children = frame.children;
+ 
+-            if (!evaluate(context, parent, rules, rule[1]))
++            if (result === FAILURE || type === POSITIVE_LOOK_AHEAD || type === NEGATIVE_LOOK_AHEAD)
+             {
+-                context.position = position;
+-                parent.children.length = childCount;
++                position = frame.position;
++                children.length = frame.childCount;
+             }
+-
+-            return true;
+-    }
++        }
++    } while (sp > 0)
++//console.log("REPEATS: " + repeats + " / " + total);
++    return start;
+ }
+ 
++
+ build_rule = { };
+ 
+ build_rule["DotExpression"] = function(node)

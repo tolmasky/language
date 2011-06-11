@@ -1,0 +1,10 @@
+
+start = additive
+
+additive = multiplicative ("+" additive)?
+
+multiplicative = primary ("*" multiplicative)?
+
+primary = integer / "(" additive ")"
+
+integer = [0-9]+

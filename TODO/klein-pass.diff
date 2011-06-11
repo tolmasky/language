@@ -1,0 +1,147 @@
+diff --git a/language/parser.js b/language/parser.js
+index 76ae46a..fe4f075 100644
+--- a/language/parser.js
++++ b/language/parser.js
+@@ -53,7 +53,39 @@ function context(input, table)
+         this.memos[i] = [];
+ }
+ 
+-function evaluate(context, parent, rules, rule_id)
++var parsers = { };
++
++parsers[STRING_LITERAL] = function(context, parent, rules, rule_id, multiple)
++{
++    var rule = rules[rule_id], input_length = context.input.length,
++    memos = context.memos[rule_id], uid = context.position;
++        var string = rule[1],
++            string_length = string.length;
++
++        if (string_length + context.position > input_length)
++        {
++            memos[uid] = false;
++            return false;
++        }
++
++        var index = 0;
++
++        for (; index < string_length; ++context.position, ++index)
++            if (context.input.charAt(context.position) !== string.charAt(index))
++            {
++                context.position -= index;            
++                memos[uid] = false;
++                return false;
++            }
++
++//            memos[uid] = string;
++        if (parent)
++            parent.children.push(string);
++
++        return true;
++}
++
++function evaluate(context, parent, rules, rule_id, multiple)
+ {
+     var rule = rules[rule_id],
+         type = rule[0],
+@@ -67,6 +99,11 @@ function evaluate(context, parent, rules, rule_id)
+                 return true;
+             else if (entry)
+             {
++                if (!entry.node)
++                {
++                    context.position = entry;
++                    return true;
++                }
+                 if (parent)
+                     parent.children.push(entry.node);
+                 context.position = entry.position;
+@@ -76,7 +113,7 @@ function evaluate(context, parent, rules, rule_id)
+     {
+         case NAME:
+             var node = new SyntaxNode(rule[1], context.input, context.position);
+-            if (!evaluate(context, node, rules, rule[2]))
++            if (!evaluate(context, node, rules, rule[2], multiple))
+             {
+                 context.memos[uid] = false;
+                 return false;
+@@ -88,15 +125,28 @@ function evaluate(context, parent, rules, rule_id)
+             return true;
+ 
+         case CHARACTER_CLASS:
+-            var character = context.input.charAt(context.position);
+-            // ? if (typeof rule[1] === "function")
+-            if (character.match(rule[1]))
++            var entered = 0;
++            while ( (character = context.input.charAt(context.position)) &&
++                    character.match(rule[1]))
+             {
+                 if (parent)
+                     parent.children.push(character);
+                 ++context.position;
++
++                if (!multiple)
++                {
++                    memos[uid] = context.position;
++                    return true;
++                }
++                entered++;
++            }
++
++            if (entered)
++            {
++                memos[uid] = context.position;
+                 return true;
+             }
++
+             memos[uid] = false;
+             return false;
+ 
+@@ -133,37 +183,14 @@ function evaluate(context, parent, rules, rule_id)
+             memos[uid] = false;
+             return false;
+ 
+-        case STRING_LITERAL:
+-            var string = rule[1],
+-                string_length = string.length;
+-
+-            if (string_length + context.position > input_length)
+-            {
+-                memos[uid] = false;
+-                return false;
+-            }
+-
+-            var index = 0;
+-
+-            for (; index < string_length; ++context.position, ++index)
+-                if (context.input.charAt(context.position) !== string.charAt(index))
+-                {
+-                    context.position -= index;            
+-                    memos[uid] = false;
+-                    return false;
+-                }
+-
+-//            memos[uid] = string;
+-            if (parent)
+-                parent.children.push(string);
+-
+-            return true;
++        case STRING_LITERAL: return parsers[STRING_LITERAL](context, parent, rules, rule_id);
+         case DOT:
+             if (context.position < input_length)
+             {
+                 if (parent)
+                     parent.children.push(context.input.charAt(context.position));
+                 ++context.position;
++                memos[uid] = context.position;
+                 return true;
+             }
+             memos[uid] = false;
+@@ -182,7 +209,7 @@ function evaluate(context, parent, rules, rule_id)
+                 position = context.position,
+                 childCount = parent && parent.children.length;
+ 
+-            while (evaluate(context, parent, rules, rule[1]))
++            while (evaluate(context, parent, rules, rule[1], true))
+             {
+                 position = context.position,
+                 childCount = parent && parent.children.length;

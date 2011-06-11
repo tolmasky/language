@@ -1,0 +1,204 @@
+diff --git a/language/parser.js b/language/parser.js
+index 76ae46a..a3de07b 100644
+--- a/language/parser.js
++++ b/language/parser.js
+@@ -42,7 +42,8 @@ var NAME                = 0,
+     OPTIONAL            = 8,
+     NEGATIVE_LOOK_AHEAD = 9,
+     POSITIVE_LOOK_AHEAD = 10,
+-    __REFERENCE         = 11;
++    CUT                 = 11,
++    __REFERENCE         = 12;
+ 
+ function context(input, table)
+ {
+@@ -121,11 +122,18 @@ function evaluate(context, parent, rules, rule_id)
+             for (; index < count; ++index)
+             {
+                 // cache opportunity here.
+-                var child_count = parent && parent.children.length;
+-
+-                if (evaluate(context, parent, rules, rule[index]))
++                var child_count = parent && parent.children.length,
++                    result = evaluate(context, parent, rules, rule[index]);
++                
++                if (result === true)
+                     return true;
+ 
++                if (result === CUT)
++                {
++                    memos[uid] = false;
++                    return false;
++                }
++
+                 if (parent)
+                     parent.children.length = child_count;
+                 context.position = position;
+@@ -133,6 +141,14 @@ function evaluate(context, parent, rules, rule_id)
+             memos[uid] = false;
+             return false;
+ 
++        case CUT:
++            // The left hand operator of a cut expression is always dynamically inserted
++            // and thus can safely be discarded.
++            if (!evaluate(context, null, rules, rule[1]))
++                return CUT;
++
++            return evaluate(context, null, rules, rule[2]);
++
+         case STRING_LITERAL:
+             var string = rule[1],
+                 string_length = string.length;
+@@ -231,11 +247,85 @@ function evaluate(context, parent, rules, rule_id)
+     }
+ }
+ 
++var EMPTY_FIRSTS = { };
++
++function insertCuts(rule, rules)
++{try{
++    var children = rule.children,
++        index = 0,
++        count = children.length,
++        firsts = rules[children[--count]].firsts,
++        ExtFIRSTS = { };
++}catch(e) { throw count + " " + require("sys").inspect(rules[rule.children[0]]); }
++    while (count--)
++    {
++        var empty = true;
++
++        // Union firsts and ExtFirsts
++        for (var hash in firsts)
++        {
++            empty = false;
++            ExtFIRSTS[hash] = true;
++        }
++
++        // If we are nul, then it's all over.
++        if (empty)
++            break;
++
++        if (count === children.length - 1)
++            continue;
++
++        var child = rules[children[count]];
++
++        firsts = child.firsts || EMPTY_FIRSTS;
++
++        // If disjoint then we can't insert a cut...
++        for (hash in firsts)
++            if (firsts.hasOwnProperty(hash) && ExtFIRSTS.hasOwnProperty(hash))
++                continue;
++
++        var hashes = [];
++
++        for (hash in ExtFIRSTS)
++            hashes.push(hash);
++
++        if (!hashes.length)
++            continue;
++
++        var prefix = null;
++
++        // Trivial case: we just need to negate one rule.
++        if (hashes.length === 1)
++            prefix = hashes[0];
++
++        // We need to negate the ordering of many rules.
++        else
++        {
++            prefix = ORDERED_CHOICE + ".[" + hashes.join(",") + "]";
++
++            if (!rules[prefix])
++                rules[prefix] = { type:ORDERED_CHOICE, hash:prefix, children:hashes };
++        }
++
++        var negated = NEGATIVE_LOOK_AHEAD + ".[" + prefix + "]";
++
++        if (!rules[negated])
++            rules[negated] = { type:NEGATIVE_LOOK_AHEAD, hash:negated, children:[prefix] };
++    
++        var cut = CUT + ".[" + negated + "," + child.hash + "]";
++
++        if (!rules[cut])
++            rules[cut] = { type:CUT, hash:cut, children:[negated, child.hash] }
++    console.log(rules[cut]);
++        rule.children[count] = cut;
++    }
++}
++
+ build_rule = { };
+ 
+ build_rule["DotExpression"] = function(node)
+ {
+-    return { type:DOT, hash:"." }
++    return { type:DOT, hash:"." };
+ }
+ 
+ build_rule["CharacterClass"] = function(node)
+@@ -267,6 +357,7 @@ build_rule["AssignmentExpression"] = function(node)
+         else if (child.rule)
+         {
+             rule.children = [child.rule.hash];
++            rule.firsts = child.firsts;
+             break;
+         }
+     }
+@@ -277,13 +368,16 @@ build_rule["AssignmentExpression"] = function(node)
+ build_rule["StringLiteral"] = function(node)
+ {
+     var string = node.innerText();
++    var firsts = { };
++
++    firsts[string] = true;
+ 
+     string = string.substr(1, string.length - 2);
+ 
+     if (string === "\\\\")
+         string = "\\";
+ 
+-    return { type:STRING_LITERAL, string:string, hash:node.innerText() };
++    return { type:STRING_LITERAL, string:string, hash:node.innerText(), firsts:firsts };
+ }
+ 
+ build_rule["OrderedChoiceExpression"] = build_rule["SequenceExpression"] = function(node)
+@@ -292,7 +386,8 @@ build_rule["OrderedChoiceExpression"] = build_rule["SequenceExpression"] = funct
+         hashes = [],
+         children = node.children,
+         index = 0,
+-        count = children.length;
++        count = children.length,
++        firsts = { };
+ 
+     for (; index < count; ++index)
+     {
+@@ -302,6 +397,9 @@ build_rule["OrderedChoiceExpression"] = build_rule["SequenceExpression"] = funct
+         {
+             child = candidate;
+             hashes.push(child.hash);
++
++            if (hashes.length === 1 && child.firsts)
++                firsts = child.firsts;
+         }
+     }
+ 
+@@ -309,7 +407,7 @@ build_rule["OrderedChoiceExpression"] = build_rule["SequenceExpression"] = funct
+     if (hashes.length === 1)
+         return child;
+ 
+-    var rule = { children:hashes };
++    var rule = { children:hashes, firsts:firsts };
+ 
+     if (node.name === "OrderedChoiceExpression")
+         rule.type = ORDERED_CHOICE;
+@@ -431,6 +529,10 @@ function build(node)
+         }
+     });
+ 
++    for (var hash in rules)
++        if (rules[hash].type === ORDERED_CHOICE)
++            insertCuts(rules[hash], rules);
++
+     return rules;
+ }
+ 

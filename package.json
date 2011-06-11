@@ -1,0 +1,46 @@
+{
+    "name":"language",
+    "version": "0.1.0",
+    "description": "A fast PEG parser generator with first class error support",
+    "keywords": [
+        "parser",
+        "peg",
+        "packrat"
+        "generator",
+        "lexer",
+        "tokenizer",
+        "compiler",
+        "lex",
+        "yacc",
+        "bison",
+        "ANTLR"
+    ],
+    "author": 
+            {
+                "name":"Francisco Tolmasky",
+                "email":"francisco@tolmasky.com",
+                "url":"http://tolmasky.com"
+            },
+    "main":"lib/language",
+    "bin":  {
+                "language": "lib/language/cli.js"
+            },
+    "preferGlobal":true,
+    "repository":
+                {
+                    "type": "git",
+                    "url": "git://github.com/tolmasky/language.git"
+                },
+    "bugs":     {
+                    "email": "francisco@tolmasky.com",
+                    "url": "http://github.com/tolmasky/language/issues"
+                },
+    "engines":  {
+                    "node": "0.4 || 0.5"
+                },
+    "directories":  {
+                        "lib": "lib",
+                        "bin": "./bin"
+                    },
+    "homepage":"http://languagejs.com"
+}

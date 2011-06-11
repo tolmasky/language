@@ -1,0 +1,6 @@
+1. no more compiling the language right before (GC)
+2. "compressed" format for SyntaxNode until done
+3. just store true for string/char/map -- we have al the info we need.
+4. pass in klein operators for quick ops
+5. just store creation opcodes then afterwards only create actual necessary syntaxnodes
+6. cuts(!)
