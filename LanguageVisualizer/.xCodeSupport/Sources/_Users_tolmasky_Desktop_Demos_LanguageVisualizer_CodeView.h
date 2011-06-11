@@ -1,0 +1,7 @@
+
+@interface CodeView : NSView
+{
+
+}
+
+@end
