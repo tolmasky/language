@@ -5,7 +5,7 @@
     "keywords": [
         "parser",
         "peg",
-        "packrat"
+        "packrat",
         "generator",
         "lexer",
         "tokenizer",
