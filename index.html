@@ -1,13 +1,106 @@
-<!doctype html>
-<html lang="en">
-    <head>
+<!DOCTYPE>
+<html>
+	<head>
+		<title></title>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <style>
+            @font-face { font-family:Junction; src:url('Junction.otf'); }
 
-        <title>CappCon 2011 - Design, Develop, Distribute</title>
+            body {
+                background: #F4F4F4;
+                font-family:Helvetica, Arial, sans-serif;
+            }
 
-    </head>
-    <body>
-        
-        <h1>Calm down, I haven't had time to make this yet. Help out by going to <a href = "">https://github.com/tolmasky/language</a>.</h1>
-        
-    </body>
+            .container {
+                margin: 0 auto;
+                width:900px;
+            }
+
+            .header {
+                background: #5079D1;
+                height:80px;
+                font-family:Junction;
+                font-size:60px;
+                text-align:center;
+                padding-top:30px;
+                border: 5px solid rgba(0,0,0,.5);
+                border-radius: 20px;
+                color: white;
+            }
+
+            .section {
+                font-size:13px;
+                border:1px solid black;
+                border-radius:5px;
+                margin-top:15px;
+                margin-bottom:15px;
+                padding: 15px;
+                background: white;
+            }
+
+            .footer {
+                text-align:center;
+            }
+
+            pre {
+                padding:5px;
+                border: 1px solid #ccc;
+                border-radius:3px;
+            }
+
+            a, h2 {
+                color: #262626;
+            }
+
+            h2 {
+                margin:5px;
+                font-size: 25px;
+            }
+        </style>
+	</head>
+	<body>
+    <div class="container">
+        <div class="header">Language.js</div>
+
+        <div class="content">
+            <div class="section">
+                <h2>What is Language.js</h2>
+                <span>
+                    Language.js is an experimental new parser based on PEG (Parsing Expression Grammar), with the special addition of the "naughty OR" operator to handle errors in a unique new way. It makes use of memorization to achieve linear time parsing speed, and support for automatic cut placement is coming to maintain mostly constant space as well (<a href="http://www.ialab.cs.tsukuba.ac.jp/~mizusima/publications/paste513-mizushima.pdf">www.ialab.cs.tsukuba.ac.jp/~mizusima/publications/paste513-mizushima.pdf</a>).
+                </span>
+            </div>
+
+            <div class="section">
+                <h2>Features</h2>
+                <span>
+                    <p>You can read about general PEG features on <a href="http://en.wikipedia.org/wiki/Parsing_expression_grammar">Wikipedia</a></p>
+
+                    <p>The most unique addition Language.js makes to PEG is how it handles errors. No parse ever fails in Language.js, instead SyntaxErrorNodes are placed into the resultant tree. This makes it trivial to do things like write syntax highlighters that have live error reporting. This also means that Language.js is very competent at handling multiple errors (as opposed to aborting on the first one that is reached).</p>
+                    
+                    <p>A new operator designed specifically to handle errors trivially and declaratively is added on top of the normal PEG operators. The naughty OR operator (%) behaves just like the choice operator (/), but only gets used if the parse first completely fails. Because of this, performance is guaranteed to never be affected, regardless of how many error rules you add to the grammar. Thus, you are allowed to offer alternative "incorrect but valid" grammars to provide increasingly useful errors to your users. More importantly, users can easily submit patches to deal with the problems they encounter. For example, the following simplified snippet from the JavaScript grammar:</p>
+                    
+                    <pre>
+                    Identifier =
+                        !(ReservedWord !IdentifierPart) IdentifierName %
+                        ReservedWordIdentifier
+                    
+                    ReservedWordIdentifier <Identifier can&rsquo;t be a reserved word>=
+                        ReservedWord !IdentifierPart
+                    </pre>
+                    <p>generates the following error message with no additional code for "new = 5":</p>
+                    <pre>
+                    new = 5;
+                    ^^^
+                    ERROR line 0: Identifier can't be a reserved word.
+                    </pre>
+                </span>
+            </div>
+            
+        </div>
+
+        <div class="footer">
+            Language.js was created by <a href="http://github.com/tolmasky">Francisco Ryan Tolmasky I</a>
+        </div>
+    </div>
+	</body>
 </html>
