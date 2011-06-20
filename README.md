@@ -1,7 +1,7 @@
 Language.js
 ===========
 
-Language.js is an experimental new parser based on PEG (Parsing Expression Grammar), with the special addition of the "naughty OR" operator to handle errors in a unique new way. It makes use of memoization to achieve linear time parsing speed, and support for automatic cut placement is coming to maintain mostly constant space as well (www.ialab.cs.tsukuba.ac.jp/~mizusima/publications/paste513-mizushima.pdf).
+Language.js is an experimental new parser based on PEG (Parsing Expression Grammar), with the special addition of the "naughty OR" operator to handle errors in a unique new way. It makes use of memoization to achieve linear time parsing speed, and support for automatic cut placement is coming to maintain mostly constant space as well (for a discussion of cut operators see: www.ialab.cs.tsukuba.ac.jp/~mizusima/publications/paste513-mizushima.pdf).
 
 Features
 --------
