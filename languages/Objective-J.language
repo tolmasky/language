@@ -366,30 +366,21 @@ LeftHandSideExpression =
     NewExpression
 
 NewExpression =
-    MemberExpression / NEW _ Expression
+    MemberExpression /
+    NEW _ NewExpression
 
 CallExpression =
     MemberExpression _ Arguments (_ (Arguments / BracketedAccessor / DotAccessor))*
 
 MemberExpression =
-    (PrimaryExpression /
-    FunctionExpression /
-    NewExpressionWithArguments)
-    (_ (BracketedAccessor /
-    DotAccessor))*
+    (PrimaryExpression / FunctionExpression / NEW _ MemberExpression _ Arguments)
+    (_ (BracketedAccessor / DotAccessor))*
 
-BracketedAccessor = "[" _ Expression _ "]"
+BracketedAccessor =
+    "[" _ Expression _ "]"
 
-BracketedPropertyExpression =
-    MemberExpression _ BracketedAccessor
-
-DotAccessor = "." _ IdentifierName
-
-DotPropertyExpression =
-    MemberExpression _ DotAccessor
-
-NewExpressionWithArguments =
-    NEW _ Expression _ Arguments
+DotAccessor =
+    "." _ IdentifierName
 
 Arguments =
     "(" _ ArgumentList? _ ")"
@@ -753,41 +744,6 @@ UnicodeDigit = [\u0030-\u0039\u0660-\u0669\u06F0-\u06F9\u07C0-\u07C9\u0966-\u096
 // Any character in the Unicode category "Connector punctuation (Pc)"
 // http://www.fileformat.info/info/unicode/category/Pc/list.htm
 UnicodeConnectorPunctuation = [\u005F\u203F\u2040\u2054\uFE33\uFE34\uFE4D-\uFE4F\uFF3F]
-
-
-CharacterClassEscape = [dDsSwW]
-
-
-//CharacterClass = "[" ("^" ClassRanges / ClassRanges) "]"
-
-CharacterClass = "[" (ClassRange / ClassAtom)* "]"
-
-ClassRange =    ClassAtom "-" ClassAtom
-
-ClassAtom  =    "-" /
-                ![\\\]-] . /
-                "\\" ClassEscape
-
-CharacterEscape =   ControlEscape /
-                    "c" ControlLetter /
-                    HexEscapeSequence /
-                    UnicodeEscapeSequence /
-                    IdentityEscape
-
-ControlEscape = [fnrtv]
-
-ControlLetter = [a-zA-Z]
-
-IdentityEscape =    !IdentifierPart . /
-                    ZWJ /
-                    ZWNJ
-
-DecimalEscape = DecimalIntegerLiteral !DecimalDigit
-
-ClassEscape =   DecimalEscape /
-                "b" /
-                CharacterEscape /
-                CharacterClassEscape
 
 FALSE =
     "false" !(IdentifierPart)
