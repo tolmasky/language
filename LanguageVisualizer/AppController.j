@@ -76,7 +76,7 @@
     {
         innerText = innerText.replace(new RegExp("\n", "g"), " ");
 
-        var actualLength = innerText.replace(new RegExp("\s", "g"), "").length;
+        var actualLength = innerText.replace(new RegExp("\\s", "g"), "").length;
 
         if (actualLength > 25)
             innerText = " (" + innerText.substr(0, 25) + "...)";
