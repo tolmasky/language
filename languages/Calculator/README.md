@@ -11,5 +11,5 @@ After the grammar has been successfully compiled, try out the evaluator script:
     2
     $ node evaluator.js "(5+8)/9"
     1.4444444444444444
-    $ node evaluator.js "8*9-9"
+    $ node evaluator.js 8*9-9
     63
