@@ -19,28 +19,40 @@ SourceElement =
     ImportStatement
 
 ClassDeclaration =
-    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ InstanceVariableDeclaration* _ "}" _ ClassBody _ "@end"
+    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ CompoundIvarDeclaration* _ "}" _ ClassBody _ "@end"
 
 SuperclassDeclaration =
     ":" _ Identifier
 
-InstanceVariableDeclaration =
-    InstanceVariableType _ Identifier _ Accessors? _ ("," _ Identifier _ Accessors?)* _ EOS
+CompoundIvarDeclaration =
+    IvarType _ IvarDeclaration (_ "," _ IvarDeclaration)* _ EOS
 
-InstanceVariableTypeElement =
+IvarType =
+    IvarTypeElement (_ IvarTypeElement)*
+
+IvarTypeElement =
     !((Identifier / "@outlet") _ (Accessors / EOS / ",")) (Identifier / "@outlet")
 
-InstanceVariableType =
-    InstanceVariableTypeElement (_ InstanceVariableTypeElement)*
+IvarDeclaration =
+    Identifier _ Accessors?
 
 Accessors =
-    "@accessors" AccessorsConfiguration?
+    "@accessors" ("(" (AccessorsConfiguration (_ "," _ AccessorsConfiguration)*)? ")")?
 
 AccessorsConfiguration =
-    "(" _ ("readonly" (_ "," _ IvarPropertyName)? / IvarPropertyName (_ "," _ "readonly")?)? _ ")"
+    IvarPropertyName /
+    IvarGetterName /
+    IvarSetterName /
+    "readonly"
 
 IvarPropertyName =
     "property" _ "=" _ Identifier
+
+IvarGetterName =
+    "getter" _ "=" _ Identifier
+
+IvarSetterName =
+    "setter" _ "=" _ Identifier (_ ":")?
 
 ClassBody =
     ClassElements?
