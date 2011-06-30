@@ -42,13 +42,13 @@ MethodLabel =
     Identifier _ ":" (_ "(" _ MethodParameterType _ ")")? _ Identifier
 
 MethodReturnType =
-    MethodType
+    Type
 
 MethodParameterType =
-    MethodType
+    Type
 
-MethodType =
-    Identifier (_ Identifier)*
+Type =
+    ("void" / Identifier) (_ ("void" / Identifier))*
 
 ImportStatement =
     "@import" _ (LocalFilePath / StandardFilePath)
@@ -57,7 +57,7 @@ LocalFilePath =
     StringLiteral
 
 StandardFilePath =
-    "<" _ (!">")* _ ">"
+    "<" _ ("\\>" / (!">" .))* _ ">"
 
 FunctionDeclaration =
     FUNCTION _ Identifier _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
