@@ -16,7 +16,7 @@ SourceElement =
     Statement / FunctionDeclaration / ClassDeclaration / ImportStatement
 
 ClassDeclaration =
-    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ "}" _ ClassBody _ "@end"
+    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ InstanceVariableDeclaration _"}" _ ClassBody _ "@end"
 
 SuperclassDeclaration =
     ":" _ Identifier
@@ -101,6 +101,12 @@ BadBlock <Missing ending brace>=
     "{" _ StatementList? _
 
 // 12.2 Variable Statement
+
+InstanceVariableDeclaration = 
+    Identifier _ Identifier _ Accessors? ("," _ Identifier Accessors?)* _ EOS
+
+Accessors = 
+    "@accessors" ("(" "readonly"? _ ("property="Identifier)? ")")?
 
 VariableStatement =
   VAR _ VariableDeclaration (_ "," _ VariableDeclaration)* EOS
