@@ -1,7 +1,0 @@
-
-@interface CodeView : NSView
-{
-
-}
-
-@end
