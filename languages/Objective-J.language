@@ -13,13 +13,34 @@ SourceElements =
     SourceElement (_ SourceElement)*
 
 SourceElement =
-    Statement / FunctionDeclaration / ClassDeclaration / ImportStatement
+    Statement /
+    FunctionDeclaration /
+    ClassDeclaration /
+    ImportStatement
 
 ClassDeclaration =
-    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ InstanceVariableDeclaration _"}" _ ClassBody _ "@end"
+    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ InstanceVariableDeclaration* _ "}" _ ClassBody _ "@end"
 
 SuperclassDeclaration =
     ":" _ Identifier
+
+InstanceVariableDeclaration =
+    InstanceVariableType _ Identifier _ Accessors? _ ("," _ Identifier _ Accessors?)* _ EOS
+
+InstanceVariableTypeElement =
+    !((Identifier / "@outlet") _ (Accessors / EOS / ",")) (Identifier / "@outlet")
+
+InstanceVariableType =
+    InstanceVariableTypeElement (_ InstanceVariableTypeElement)*
+
+Accessors =
+    "@accessors" AccessorsConfiguration?
+
+AccessorsConfiguration =
+    "(" _ ("readonly" (_ "," _ IvarPropertyName)? / IvarPropertyName (_ "," _ "readonly")?)? _ ")"
+
+IvarPropertyName =
+    "property" _ "=" _ Identifier
 
 ClassBody =
     ClassElements?
@@ -101,12 +122,6 @@ BadBlock <Missing ending brace>=
     "{" _ StatementList? _
 
 // 12.2 Variable Statement
-
-InstanceVariableDeclaration = 
-    Identifier _ Identifier _ Accessors? ("," _ Identifier Accessors?)* _ EOS
-
-Accessors = 
-    "@accessors" ("(" "readonly"? _ ("property="Identifier)? ")")?
 
 VariableStatement =
   VAR _ VariableDeclaration (_ "," _ VariableDeclaration)* EOS
