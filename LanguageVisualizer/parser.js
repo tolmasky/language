@@ -55,6 +55,8 @@ function parse(aCompiledGrammar, input, name)
         if (aCompiledGrammar.nameToUID["EOF"] !== undefined)
             table[0] = [SEQUENCE, nameToUID["%" + name], nameToUID["EOF"]];
 
+        node.children.length = 0;
+
         evaluate(new context(input, table), node, table, 0);
 
         node.traverse(
