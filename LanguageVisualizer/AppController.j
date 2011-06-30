@@ -6,15 +6,13 @@
  * Copyright 2011, Your Company All rights reserved.
  */
 
-@import <Foundation/CPObject.j>
-
-@import "CodeView.j"
+@import <AceKit/AceKit.j>
 
 
 @implementation AppController : CPObject
 {
     CPWindow                theWindow; //this "outlet" is connected automatically by the Cib
-    IBOutlet CodeView       codeView;
+    IBOutlet AceView        codeView;
     IBOutlet CPOutlineView  outlineView;
     SyntaxNode              rootSyntaxNode;
 }
@@ -36,7 +34,7 @@
 
 - (IBAction)parse:(id)aSender
 {
-    rootSyntaxNode = [[CPTreeNode alloc] initWithSyntaxNode:Parser.Parser.parse([codeView code])];
+    rootSyntaxNode = [[CPTreeNode alloc] initWithSyntaxNode:Parser.Parser.parse([codeView string])];
 
     [outlineView reloadData];
 }
@@ -91,7 +89,7 @@
 - (void)outlineViewSelectionDidChange:(CPNotification)aNotification
 {
     var item = [outlineView itemAtRow:[outlineView selectedRow]];
-
+return;
     if (typeof item.valueOf() === "string")
         [codeView highlight:null];
     else
