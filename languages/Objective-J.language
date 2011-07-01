@@ -69,27 +69,37 @@ ClassElements =
     _ ClassElement (_ ClassElement)* _
 
 ClassElement =
-    MethodDeclaration /
+    ClassMethodDeclaration /
+    InstanceMethodDeclaration /
     Statement /
     FunctionDeclaration
 
-MethodDeclaration =
-    [-+] (_ "(" _ MethodReturnType _ ")")? _ MethodStartLabel (_ MethodLabel)* _ ";"? _ "{" _ FunctionBody _ "}"
+ClassMethodDeclaration =
+    "+" (_ MethodType)? _ MethodSelector _ ";"? _
+    "{" _ FunctionBody _ "}"
 
-MethodStartLabel =
-    Identifier (_ ":" (_ "(" _ MethodParameterType _ ")")? _ Identifier)?
+InstanceMethodDeclaration =
+    "-" (_ MethodType)? _ MethodSelector _ ";"? _
+    "{" _ FunctionBody _ "}"
 
-MethodLabel =
-    Identifier _ ":" (_ "(" _ MethodParameterType _ ")")? _ Identifier
+MethodSelector =
+    KeywordSelector (_ "," _ "...")? / // Paramter type list?
+    UnarySelector
 
-MethodReturnType =
-    Type
+UnarySelector =
+    Selector
 
-MethodParameterType =
-    Type
+KeywordSelector =
+    KeywordDeclarator (_ KeywordDeclarator)*
 
-Type =
-    ("void" / Identifier) (_ ("void" / Identifier))*
+KeywordDeclarator =
+    (Selector _)? ":" (_ MethodType)? _ Identifier
+
+Selector =
+    Identifier
+
+MethodType =
+    "(" _ ("void" / Identifier) (_ ("void" / Identifier))* _ ")"
 
 ImportStatement =
     "@import" _ (LocalFilePath / StandardFilePath)
