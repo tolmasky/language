@@ -279,7 +279,11 @@ Selector =
     Identifier
 
 MethodType =
-    "(" _ ("void" / Identifier) (_ ("void" / Identifier))* _ ")"
+    "(" _ (VOID / ACTION / Identifier) (_ (VOID / ACTION / Identifier))* _ ")"
+
+ACTION  =
+    "@action" !IdentifierPart /
+    "IBAction" !IdentifierPart
 
 //
 // 11 Expressions
