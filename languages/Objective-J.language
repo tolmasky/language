@@ -19,10 +19,18 @@ SourceElement =
     ImportStatement
 
 ClassDeclaration =
-    "@implementation" _ Identifier _ SuperclassDeclaration? _ "{" _ CompoundIvarDeclaration* _ "}" _ ClassBody _ "@end"
+    "@implementation" _ Identifier _ (SuperclassDeclaration / CategoryDeclaration)? _
+    "{"
+        (_ CompoundIvarDeclaration)* _
+    "}"
+    _ ClassBody _
+    "@end"
 
 SuperclassDeclaration =
     ":" _ Identifier
+
+CategoryDeclaration =
+    "(" _ Identifier _ ")"
 
 CompoundIvarDeclaration =
     IvarType _ IvarDeclaration (_ "," _ IvarDeclaration)* _ EOS
