@@ -494,7 +494,14 @@ Literal =
     BooleanLiteral /
     NumericLiteral /
     StringLiteral /
-    RegularExpressionLiteral
+    RegularExpressionLiteral /
+    SelectorLiteral
+
+SelectorLiteral =
+    "@selector" _ "(" _ SelectorLiteralContents _ ")"
+
+SelectorLiteralContents =
+    (Identifier? _ ":" _)+ / Identifier
 
 NullLiteral =
     NULL
