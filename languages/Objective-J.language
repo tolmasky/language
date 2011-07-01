@@ -47,8 +47,7 @@ Statement =
     TryStatement /
     DebuggerStatement /
     ImportStatement /
-    ClassDeclarationStatement /
-    MessageStatement
+    ClassDeclarationStatement
 
 // 12.1 Block
 
@@ -116,11 +115,6 @@ ForInFirstExpression =
 
 EachStatement =
     "@each" _ "(" _ ForInFirstExpression _ IN _ Expression _ ")" _ Statement
-
-MessageStatement =
-    "[" _ (SuperExpression / Expression) _ Identifier (":" Expression (_ Identifier ":" _ Expression)*)? _ "]"
-
-SuperExpression = "super"
 
 // 12.7 The continue Statement
 
@@ -434,7 +428,7 @@ CallExpression =
     MemberExpression _ Arguments (_ (Arguments / BracketedAccessor / DotAccessor))*
 
 MemberExpression =
-    (PrimaryExpression / FunctionExpression / NEW _ MemberExpression _ Arguments)
+    (PrimaryExpression / FunctionExpression / MessageExpression / NEW _ MemberExpression _ Arguments)
     (_ (BracketedAccessor / DotAccessor))*
 
 BracketedAccessor =
@@ -456,6 +450,23 @@ PrimaryExpression =
     ArrayLiteral /
     ObjectLiteral /
     "(" _ Expression _ ")"
+
+MessageExpression =
+    "[" _ (SUPER / Expression) _ SelectorCall _ "]"
+
+// As per Objective-C, "(super)" actually looks for the ivar named super,
+// so we only need to worry about the naked keyword.
+SUPER = "super" !IdentifierPart
+
+SelectorCall =
+    KeywordSelectorCall (_ "," _ Expression)* /
+    Identifier
+
+KeywordSelectorCall =
+    KeywordCall (_ KeywordCall)*
+
+KeywordCall =
+    (Identifier? _ ":") Expression
 
 ArrayLiteral =
     "[" _ ElementList _ "]"
