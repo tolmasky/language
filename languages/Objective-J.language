@@ -14,101 +14,7 @@ SourceElements =
 
 SourceElement =
     Statement /
-    FunctionDeclaration /
-    ClassDeclaration /
-    ImportStatement
-
-ClassDeclaration =
-    "@implementation" _ Identifier _ (SuperclassDeclaration / CategoryDeclaration)? _
-    "{"
-        (_ CompoundIvarDeclaration)* _
-    "}"
-    _ ClassBody _
-    "@end"
-
-SuperclassDeclaration =
-    ":" _ Identifier
-
-CategoryDeclaration =
-    "(" _ Identifier _ ")"
-
-CompoundIvarDeclaration =
-    IvarType _ IvarDeclaration (_ "," _ IvarDeclaration)* _ EOS
-
-IvarType =
-    IvarTypeElement (_ IvarTypeElement)*
-
-IvarTypeElement =
-    !((Identifier / "@outlet") _ (Accessors / EOS / ",")) (Identifier / "@outlet")
-
-IvarDeclaration =
-    Identifier _ Accessors?
-
-Accessors =
-    "@accessors" ("(" (AccessorsConfiguration (_ "," _ AccessorsConfiguration)*)? ")")?
-
-AccessorsConfiguration =
-    IvarPropertyName /
-    IvarGetterName /
-    IvarSetterName /
-    "readonly"
-
-IvarPropertyName =
-    "property" _ "=" _ Identifier
-
-IvarGetterName =
-    "getter" _ "=" _ Identifier
-
-IvarSetterName =
-    "setter" _ "=" _ Identifier (_ ":")?
-
-ClassBody =
-    ClassElements?
-
-ClassElements =
-    _ ClassElement (_ ClassElement)* _
-
-ClassElement =
-    ClassMethodDeclaration /
-    InstanceMethodDeclaration /
-    Statement /
     FunctionDeclaration
-
-ClassMethodDeclaration =
-    "+" (_ MethodType)? _ MethodSelector _ ";"? _
-    "{" _ FunctionBody _ "}"
-
-InstanceMethodDeclaration =
-    "-" (_ MethodType)? _ MethodSelector _ ";"? _
-    "{" _ FunctionBody _ "}"
-
-MethodSelector =
-    KeywordSelector (_ "," _ "...")? / // Paramter type list?
-    UnarySelector
-
-UnarySelector =
-    Selector
-
-KeywordSelector =
-    KeywordDeclarator (_ KeywordDeclarator)*
-
-KeywordDeclarator =
-    (Selector _)? ":" (_ MethodType)? _ Identifier
-
-Selector =
-    Identifier
-
-MethodType =
-    "(" _ ("void" / Identifier) (_ ("void" / Identifier))* _ ")"
-
-ImportStatement =
-    "@import" _ (LocalFilePath / StandardFilePath)
-
-LocalFilePath =
-    StringLiteral
-
-StandardFilePath =
-    "<" _ ("\\>" / (!">" .))* _ ">"
 
 FunctionDeclaration =
     FUNCTION _ Identifier _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
@@ -140,6 +46,8 @@ Statement =
     ThrowStatement /
     TryStatement /
     DebuggerStatement /
+    ImportStatement /
+    ClassDeclarationStatement /
     MessageStatement
 
 // 12.1 Block
@@ -190,7 +98,8 @@ IterationStatement =
     EachStatement
 
 DoWhileStatement =
-    DO _ Statement _ WHILE _ "(" _ Expression _ ")" _ EOS
+    DO _ Statement _ WHILE _ "(" _ Expression _ ")" EOS
+
 WhileStatement =
     WHILE _ "(" _ Expression _ ")" _ Statement
 
@@ -274,7 +183,104 @@ Finally =
 // 12.15 The debugger Statement
 
 DebuggerStatement =
-    DEBUGGER _ EOS
+    DEBUGGER EOS
+
+// 12.[16] Import Statement
+
+ImportStatement =
+    "@import" _ (LocalFilePath / StandardFilePath) EOS
+
+LocalFilePath =
+    StringLiteral
+
+StandardFilePath =
+    "<" _ ("\\>" / (!">" .))* _ ">"
+
+// 12.[17] Class Declaration Statement
+
+ClassDeclarationStatement =
+    "@implementation" _ Identifier _ (SuperclassDeclaration / CategoryDeclaration)? _
+    ("{"
+        (_ CompoundIvarDeclaration)* _
+    "}")?
+    _ ClassBody _
+    "@end" EOS
+
+SuperclassDeclaration =
+    ":" _ Identifier
+
+CategoryDeclaration =
+    "(" _ Identifier _ ")"
+
+CompoundIvarDeclaration =
+    IvarType _ IvarDeclaration (_ "," _ IvarDeclaration)* EOS
+
+IvarType =
+    IvarTypeElement (_ IvarTypeElement)*
+
+IvarTypeElement =
+    !((Identifier / "@outlet") _ (Accessors / EOS / ",")) (Identifier / "@outlet")
+
+IvarDeclaration =
+    Identifier _ Accessors?
+
+Accessors =
+    "@accessors" ("(" (AccessorsConfiguration (_ "," _ AccessorsConfiguration)*)? ")")?
+
+AccessorsConfiguration =
+    IvarPropertyName /
+    IvarGetterName /
+    IvarSetterName /
+    "readonly"
+
+IvarPropertyName =
+    "property" _ "=" _ Identifier
+
+IvarGetterName =
+    "getter" _ "=" _ Identifier
+
+IvarSetterName =
+    "setter" _ "=" _ Identifier (_ ":")?
+
+ClassBody =
+    ClassElements?
+
+ClassElements =
+    ClassElement (_ ClassElement)*
+
+ClassElement =
+    ClassMethodDeclaration /
+    InstanceMethodDeclaration /
+    Statement /
+    FunctionDeclaration
+
+ClassMethodDeclaration =
+    "+" (_ MethodType)? _ MethodSelector _ ";"? _
+    "{" _ FunctionBody _ "}"
+
+InstanceMethodDeclaration =
+    "-" (_ MethodType)? _ MethodSelector _ ";"? _
+    "{" _ FunctionBody _ "}"
+
+MethodSelector =
+    KeywordSelector (_ "," _ "...")? / // Paramter type list?
+    UnarySelector
+
+UnarySelector =
+    Selector
+
+KeywordSelector =
+    KeywordDeclarator (_ KeywordDeclarator)*
+
+KeywordDeclarator =
+    (Selector _)? ":" (_ MethodType)? _ Identifier
+
+Selector =
+    Identifier
+
+MethodType =
+    "(" _ ("void" / Identifier) (_ ("void" / Identifier))* _ ")"
+
 //
 // 11 Expressions
 //
