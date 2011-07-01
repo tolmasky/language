@@ -927,7 +927,7 @@ function serializePropertyList( aPropertyList, serializers)
         type = "boolean";
     else if (type === "number")
     {
-        if (FLOOR(aPropertyList) === aPropertyList)
+        if (FLOOR(aPropertyList) === aPropertyList && ("" + aPropertyList).indexOf('e') == -1)
             type = "integer";
         else
             type = "real";
@@ -4170,13 +4170,50 @@ var _class_initialize = function( aClass)
         meta.info = (meta.info | (CLS_INITIALIZED)) & ~(CLS_INITIALIZING);
     }
 }
-var _objj_forward = new objj_method("forward", function(self, _cmd)
+var _objj_forward = function(self, _cmd)
 {
-    return objj_msgSend(self, "forward::", _cmd, arguments);
-});
+    var isa = self.isa,
+        implementation = isa.method_dtable[SEL_forwardingTargetForSelector_];
+    if (implementation)
+    {
+        var target = implementation.method_imp.call(this, self, SEL_forwardingTargetForSelector_, _cmd);
+        if (target && target !== self)
+        {
+            arguments[0] = target;
+            return objj_msgSend.apply(this, arguments);
+        }
+    }
+    implementation = isa.method_dtable[SEL_methodSignatureForSelector_];
+    if (implementation)
+    {
+        var forwardInvocationImplementation = isa.method_dtable[SEL_forwardInvocation_];
+        if (forwardInvocationImplementation)
+        {
+            var signature = implementation.method_imp.call(this, self, SEL_methodSignatureForSelector_, _cmd);
+            if (signature)
+            {
+                var invocationClass = objj_lookUpClass("CPInvocation");
+                if (invocationClass)
+                {
+                    var invocation = objj_msgSend(invocationClass, SEL_invocationWithMethodSignature_, signature),
+                        index = 0,
+                        count = arguments.length;
+                    for (; index < count; ++index)
+                        objj_msgSend(invocation, SEL_setArgument_atIndex_, arguments[index], index);
+                    forwardInvocationImplementation.method_imp.call(this, self, SEL_forwardInvocation_, invocation);
+                    return objj_msgSend(invocation, SEL_returnValue);
+                }
+            }
+        }
+    }
+    implementation = isa.method_dtable[SEL_doesNotRecognizeSelector_];
+    if (implementation)
+        return implementation.method_imp.call(this, self, SEL_doesNotRecognizeSelector_, _cmd);
+    throw class_getName(isa) + " does not implement doesNotRecognizeSelector:. Did you forget a superclass for " + class_getName(isa) + "?";
+};
 class_getMethodImplementation = function( aClass, aSelector)
 {
-    if (!((((aClass.info & (CLS_META))) ? aClass : aClass.isa).info & (CLS_INITIALIZED))) _class_initialize(aClass); var method = aClass.method_dtable[aSelector]; if (!method) method = _objj_forward; var implementation = method.method_imp;;
+    if (!((((aClass.info & (CLS_META))) ? aClass : aClass.isa).info & (CLS_INITIALIZED))) _class_initialize(aClass); var method = aClass.method_dtable[aSelector]; var implementation = method ? method.method_imp : _objj_forward;;
     return implementation;
 }
 class_getMethodImplementation.displayName = "class_getMethodImplementation";
@@ -4300,7 +4337,7 @@ objj_msgSend = function( aReceiver, aSelector)
     if (aReceiver == nil)
         return nil;
     var isa = aReceiver.isa;
-    if (!((((isa.info & (CLS_META))) ? isa : isa.isa).info & (CLS_INITIALIZED))) _class_initialize(isa); var method = isa.method_dtable[aSelector]; if (!method) method = _objj_forward; var implementation = method.method_imp;;
+    if (!((((isa.info & (CLS_META))) ? isa : isa.isa).info & (CLS_INITIALIZED))) _class_initialize(isa); var method = isa.method_dtable[aSelector]; var implementation = method ? method.method_imp : _objj_forward;;
     switch(arguments.length)
     {
         case 2: return implementation(aReceiver, aSelector);
@@ -4314,7 +4351,7 @@ objj_msgSendSuper = function( aSuper, aSelector)
 {
     var super_class = aSuper.super_class;
     arguments[0] = aSuper.receiver;
-    if (!((((super_class.info & (CLS_META))) ? super_class : super_class.isa).info & (CLS_INITIALIZED))) _class_initialize(super_class); var method = super_class.method_dtable[aSelector]; if (!method) method = _objj_forward; var implementation = method.method_imp;;
+    if (!((((super_class.info & (CLS_META))) ? super_class : super_class.isa).info & (CLS_INITIALIZED))) _class_initialize(super_class); var method = super_class.method_dtable[aSelector]; var implementation = method ? method.method_imp : _objj_forward;;
     return implementation.apply(aSuper.receiver, arguments);
 }
 objj_msgSendSuper.displayName = "objj_msgSendSuper";
@@ -4363,6 +4400,25 @@ sel_registerName = function( aName)
     return aName;
 }
 sel_registerName.displayName = "sel_registerName";
+objj_class.prototype.toString = objj_object.prototype.toString = function()
+{
+    var isa = this.isa;
+    if (class_getInstanceMethod(isa, SEL_description))
+        return objj_msgSend(this, SEL_description);
+    if (class_isMetaClass(isa))
+        return this.name;
+    return "[" + isa.name + " Object](-description not implemented)";
+}
+var SEL_description = sel_getUid("description"),
+    SEL_forwardingTargetForSelector_ = sel_getUid("forwardingTargetForSelector:"),
+    SEL_methodSignatureForSelector_ = sel_getUid("methodSignatureForSelector:"),
+    SEL_forwardInvocation_ = sel_getUid("forwardInvocation:"),
+    SEL_doesNotRecognizeSelector_ = sel_getUid("doesNotRecognizeSelector:"),
+    SEL_invocationWithMethodSignature_ = sel_getUid("invocationWithMethodSignature:"),
+    SEL_setTarget_ = sel_getUid("setTarget:"),
+    SEL_setSelector_ = sel_getUid("setSelector:"),
+    SEL_setArgument_atIndex_ = sel_getUid("setArgument:atIndex:"),
+    SEL_returnValue = sel_getUid("returnValue");
 objj_eval = function( aString)
 {
     var url = exports.pageURL;
