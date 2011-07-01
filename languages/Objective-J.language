@@ -270,7 +270,7 @@ KeywordDeclarator =
     (Selector _)? ":" (_ MethodType)? _ Identifier
 
 Selector =
-    Identifier
+    IdentifierName
 
 MethodType =
     "(" _ (VOID / ACTION / Identifier) (_ (VOID / ACTION / Identifier))* _ ")"
@@ -460,13 +460,13 @@ SUPER = "super" !IdentifierPart
 
 SelectorCall =
     KeywordSelectorCall (_ "," _ Expression)* /
-    Identifier
+    UnarySelector
 
 KeywordSelectorCall =
     KeywordCall (_ KeywordCall)*
 
 KeywordCall =
-    (Identifier? _ ":") Expression
+    (Selector? _ ":") Expression
 
 ArrayLiteral =
     "[" _ ElementList _ "]"
@@ -516,7 +516,7 @@ SelectorLiteral =
     "@selector" _ "(" _ SelectorLiteralContents _ ")"
 
 SelectorLiteralContents =
-    (Identifier? _ ":" _)+ / Identifier
+    (Selector? _ ":" _)+ / Identifier
 
 NullLiteral =
     NULL
