@@ -89,7 +89,7 @@ IterationStatement =
     ForInStatement
 
 DoWhileStatement =
-    DO _ Statement _ WHILE _ "(" _ Expression _ ")" _ EOS
+    DO _ Statement _ WHILE _ "(" _ Expression _ ")" EOS
 WhileStatement =
     WHILE _ "(" _ Expression _ ")" _ Statement
 
@@ -165,7 +165,7 @@ Finally =
 // 12.15 The debugger Statement
 
 DebuggerStatement =
-    DEBUGGER _ EOS
+    DEBUGGER EOS
 //
 // 11 Expressions
 //
