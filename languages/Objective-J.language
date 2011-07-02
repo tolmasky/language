@@ -552,7 +552,7 @@ HexDigit =
     [0-9a-fA-F]
 
 StringLiteral =
-    '"' DoubleStringCharacter* '"' /
+    ("@" _)? '"' DoubleStringCharacter* '"' /
     "'" SingleStringCharacter* "'"
 
 DoubleStringCharacter =
