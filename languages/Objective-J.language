@@ -213,7 +213,7 @@ IvarType =
     IvarTypeElement (_ IvarTypeElement)*
 
 IvarTypeElement =
-    !((Identifier / "@outlet") _ (Accessors / EOS / ",")) (Identifier / "@outlet")
+    !((IdentifierName / "@outlet") _ (Accessors / EOS / ",")) (IdentifierName / "@outlet")
 
 IvarDeclaration =
     Identifier _ Accessors?
@@ -273,7 +273,7 @@ Selector =
     IdentifierName
 
 MethodType =
-    "(" _ (VOID / ACTION / Identifier) (_ (VOID / ACTION / Identifier))* _ ")"
+    "(" _ (ACTION / IdentifierName) (_ (ACTION / IdentifierName))* _ ")"
 
 ACTION  =
     "@action" !IdentifierPart /
