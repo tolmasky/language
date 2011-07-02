@@ -466,7 +466,7 @@ KeywordSelectorCall =
     KeywordCall (_ KeywordCall)*
 
 KeywordCall =
-    (Selector? _ ":") Expression
+    Selector? _ ":" _ Expression
 
 ArrayLiteral =
     "[" _ ElementList _ "]"
