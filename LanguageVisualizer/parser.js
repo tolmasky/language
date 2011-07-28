@@ -127,7 +127,10 @@ function evaluate(context, parent, rules, rule_id)
             var character = context.input.charAt(context.position);
 
             if (typeof rule[1] !== "function")
-                rule[1] = new RegExp(rule[1], "g");
+            {
+                rule[1] = new RegExp(rule[1]);
+                rule[1].global = true;
+            }
 
             if (character.match(rule[1]))
             {
