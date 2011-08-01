@@ -389,8 +389,7 @@ BooleanLiteral =
     FALSE
 
 NumericLiteral =
-    (DecimalLiteral /
-    HexIntegerLiteral) !IdentifierStart
+    (HexIntegerLiteral / DecimalLiteral) !IdentifierStart
 
 DecimalLiteral =
     (DecimalIntegerLiteral "." DecimalDigit* /
@@ -398,7 +397,7 @@ DecimalLiteral =
     DecimalIntegerLiteral) ExponentPart?
 
 DecimalIntegerLiteral =
-    "0"/
+    "0" /
     [1-9] DecimalDigit*
 
 DecimalDigit = [0-9]
