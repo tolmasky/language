@@ -44,7 +44,9 @@ Statement =
     SwitchStatement /
     ThrowStatement /
     TryStatement /
-    DebuggerStatement
+    DebuggerStatement /
+    FunctionDeclaration /
+    FunctionExpression
 
 // 12.1 Block
 

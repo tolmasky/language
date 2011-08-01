@@ -46,6 +46,8 @@ Statement =
     ThrowStatement /
     TryStatement /
     DebuggerStatement /
+    FunctionDeclaration /
+    FunctionExpression /
     ImportStatement /
     ClassDeclarationStatement
 
