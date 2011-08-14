@@ -13,7 +13,8 @@ SourceElements =
     SourceElement (_ SourceElement)*
 
 SourceElement =
-    Statement / FunctionDeclaration
+    Statement /
+    FunctionDeclaration
 
 FunctionDeclaration =
     FUNCTION _ Identifier _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
