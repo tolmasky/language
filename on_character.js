@@ -102,40 +102,42 @@ factories[OPTIONAL] = function(id, parent, state)
 {
     return function(character)
     {
-        return [parser(rules[id][1], parent), parent];
+        return [parser(rules[id][1], parent)(character), parent(character)];
     }
 }
 
-/*
 factories[ZERO_OR_MORE] = function(id, parent, state)
 {
-    return function(character)
+    var result = function(character)
     {
-        return [parser(rules[id][1], parent), parent];
+        return [parser(rules[id][1], result)(character), parent(character)];
     }
+
+    return result;
 }
 
 factories[ONE_OR_MORE] = function(id, parent, state)
 {
     return function(character)
     {
-        if (state === 0)
-            return parser(rules[id][1], parsers(id, parent, state + 1));
+        var next = parser(id, parent, state + 1);
 
-        if (state === 1)
-            return [parent];
+        if (state === 0)
+            return parser(rules[id][1], next)(character);
+
+        return [parser(rules[id][1], next)(character), parent(character)];
     }
 }
-*/
+
 function success()
 {
-    console.log("success");
+    //console.log("success");
     return success;
 }
 
 function failure()
 {
-    console.log("failure");
+    //console.log("failure");
     return failure;
 }
 
@@ -169,10 +171,10 @@ var rules = [
                 [ORDERED_CHOICE, 2, 3],
                 [DOT],
                 [CHARACTER_CLASS, "[abc]"],
-                [OPTIONAL, 6]
+                [ONE_OR_MORE, 6]
             ];
 
-var input = "abcdefdeffc",
+var input = "abcdefdeffcaaa",
     parsers = [parser(0, success)];
 
 for (i = 0; i < input.length && parsers.length > 0; ++i)
@@ -182,6 +184,6 @@ while (parsers.length > 0 && parsers[0] !== success)
     parsers = parse(parsers, null);
 
 if (parsers.length > 0)
-    console.log("success");
+    console.log("success " + parsers.length);
 else
     console.log("failure");
