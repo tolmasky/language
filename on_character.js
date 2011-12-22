@@ -43,7 +43,7 @@ factories[CHARACTER_CLASS] = function(id, parent, state)
 
     return function(character)
     {
-        if (character.match(rule[1]))
+        if (character !== null && character.match(rule[1]))
             return parent;
 
         return failure;
@@ -98,6 +98,35 @@ factories[ORDERED_CHOICE] = function(id, parent, state)
     }
 }
 
+factories[OPTIONAL] = function(id, parent, state)
+{
+    return function(character)
+    {
+        return [parser(rules[id][1], parent), parent];
+    }
+}
+
+/*
+factories[ZERO_OR_MORE] = function(id, parent, state)
+{
+    return function(character)
+    {
+        return [parser(rules[id][1], parent), parent];
+    }
+}
+
+factories[ONE_OR_MORE] = function(id, parent, state)
+{
+    return function(character)
+    {
+        if (state === 0)
+            return parser(rules[id][1], parsers(id, parent, state + 1));
+
+        if (state === 1)
+            return [parent];
+    }
+}
+*/
 function success()
 {
     console.log("success");
@@ -134,12 +163,13 @@ function parse(parsers, character)
 
 var rules = [
                 [NAME, "start", 1],
-                [SEQUENCE, 2, 3, 4, 5, 6],
+                [SEQUENCE, 2, 3, 4, 5, 6, 7],
                 [STRING_LITERAL, "abc"],
                 [STRING_LITERAL, "def"],
                 [ORDERED_CHOICE, 2, 3],
                 [DOT],
-                [CHARACTER_CLASS, "[abc]"]
+                [CHARACTER_CLASS, "[abc]"],
+                [OPTIONAL, 6]
             ];
 
 var input = "abcdefdeffc",
