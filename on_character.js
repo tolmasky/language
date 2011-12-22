@@ -15,6 +15,33 @@ var NAME                = 0,
 
 var factories = [];
 
+factories[DOT] = function(id, parent, state)
+{
+    return function(character)
+    {
+        if (character !== null)
+            return parent;
+
+        return failure;
+    }
+}
+
+factories[CHARACTER_CLASS] = function(id, parent, state)
+{
+    var rule = rules[id];
+
+    if (typeof rule[1].valueOf() === "string")
+        rule[1] = new RegExp(rule[1], "g");
+
+    return function(character)
+    {
+        if (character.match(rule[1]))
+            return parent;
+
+        return failure;
+    }
+}
+
 factories[STRING_LITERAL] = function(id, parent, state)
 {
     return function(character)
@@ -98,13 +125,15 @@ function parse(parsers, character)
 }
 
 var rules = [
-                [SEQUENCE, 1, 2, 3],
+                [SEQUENCE, 1, 2, 3, 4, 5],
                 [STRING_LITERAL, "abc"],
                 [STRING_LITERAL, "def"],
-                [ORDERED_CHOICE, 1, 2]
+                [ORDERED_CHOICE, 1, 2],
+                [DOT],
+                [CHARACTER_CLASS, "[abc]"]
             ];
 
-var input = "abcdefddd",
+var input = "abcdefdeffe",
     parsers = [parser(0, success)];
 
 for (i = 0; i < input.length && parsers.length > 0; ++i)
