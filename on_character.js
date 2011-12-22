@@ -15,6 +15,14 @@ var NAME                = 0,
 
 var factories = [];
 
+factories[NAME] = function(id, parent, state)
+{
+    return function(character)
+    {
+        return parser(rules[id][2], parent)(character);
+    }
+}
+
 factories[DOT] = function(id, parent, state)
 {
     return function(character)
@@ -125,15 +133,16 @@ function parse(parsers, character)
 }
 
 var rules = [
-                [SEQUENCE, 1, 2, 3, 4, 5],
+                [NAME, "start", 1],
+                [SEQUENCE, 2, 3, 4, 5, 6],
                 [STRING_LITERAL, "abc"],
                 [STRING_LITERAL, "def"],
-                [ORDERED_CHOICE, 1, 2],
+                [ORDERED_CHOICE, 2, 3],
                 [DOT],
                 [CHARACTER_CLASS, "[abc]"]
             ];
 
-var input = "abcdefdeffe",
+var input = "abcdefdeffc",
     parsers = [parser(0, success)];
 
 for (i = 0; i < input.length && parsers.length > 0; ++i)
