@@ -8,8 +8,8 @@ var NAME                = 0,
     ZERO_OR_MORE        = 6,
     ONE_OR_MORE         = 7,
     OPTIONAL            = 8,
-    NEGATIVE_LOOK_AHEAD = 9,
-    POSITIVE_LOOK_AHEAD = 10,
+    NEGATIVE_LOOKAHEAD  = 9,
+    POSITIVE_LOOKAHEAD  = 10,
     ERROR_NAME          = 11,
     ERROR_CHOICE        = 12;
 
@@ -129,11 +129,11 @@ factories[OPTIONAL] = function(id, parent, state)
     }
 }
 
-factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
+factories[NEGATIVE_LOOKAHEAD] = function(id, parent, state)
 {
     var finished = false,
         matched = false,
-        condition = rules[id][0] === NEGATIVE_LOOK_AHEAD;
+        condition = rules[id][0] === NEGATIVE_LOOKAHEAD;
 
     function dependant(wrapped)
     {
@@ -177,7 +177,7 @@ factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
     }
 }
 
-factories[POSITIVE_LOOK_AHEAD] = factories[NEGATIVE_LOOK_AHEAD];
+factories[POSITIVE_LOOKAHEAD] = factories[NEGATIVE_LOOKAHEAD];
 
 function success()
 {
@@ -216,7 +216,7 @@ function parse(parsers, character)
 var rules = [
                 [SEQUENCE, 1, 2, 3],
                 [STRING_LITERAL, "abc"],
-                [POSITIVE_LOOK_AHEAD, 4],
+                [POSITIVE_LOOKAHEAD, 4],
                 [STRING_LITERAL, "def"],
                 [STRING_LITERAL, "d"]
                 /*
