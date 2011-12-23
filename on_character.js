@@ -27,10 +27,10 @@ factories[DOT] = function(id, parent, state)
 {
     return function(character)
     {
-        if (character !== null)
-            return parent;
+        if (character === null)
+            return failure;
 
-        return failure;
+        return parent;
     }
 }
 
@@ -98,14 +98,6 @@ factories[ORDERED_CHOICE] = function(id, parent, state)
     }
 }
 
-factories[OPTIONAL] = function(id, parent, state)
-{
-    return function(character)
-    {
-        return [parser(rules[id][1], parent)(character), parent(character)];
-    }
-}
-
 factories[ZERO_OR_MORE] = function(id, parent, state)
 {
     var result = function(character)
@@ -126,6 +118,122 @@ factories[ONE_OR_MORE] = function(id, parent, state)
             return parser(rules[id][1], next)(character);
 
         return [parser(rules[id][1], next)(character), parent(character)];
+    }
+}
+
+factories[OPTIONAL] = function(id, parent, state)
+{
+    return function(character)
+    {
+        return [parser(rules[id][1], parent)(character), parent(character)];
+    }
+}
+/*
+function stop(p)
+{
+    p.failed = true;
+
+    return failure;
+}
+
+function wait(parent, dependency)
+{
+    var waiter = function()
+    {
+        if (dependency.succeeded)
+            return parent;
+
+        if (dependency.failed)
+            return failure;
+
+        return waiter;
+    }
+}
+
+
+
+factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
+{
+    var finished = 0,
+        succeeded = false;
+
+    function depend(p)
+    {
+        function(character)
+        {
+            var result = parser(character);
+
+            if (!finished)
+                return wrap(result);
+
+            if (!succeeded)
+                return result;
+
+            return failure;
+        }
+    }
+
+    antidepend(p)
+    {
+        var result = p
+
+        finished = true;
+        succeeded = ;
+    }
+
+    return function(character)
+    {
+        x = parser(rules[id][1], function(){ console.log("no!"); return failure(); })(character);
+
+        return [x, wait(parent, parent(character))];
+    }
+}
+*/
+
+factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
+{
+    var finished = false,
+        matched = false;
+
+    function dependant(wrapped)
+    {
+        var wrapper = function(character)
+        {
+            if (finished && matched)
+                return failure;
+
+            wrapped = wrapped(character);
+
+            if (!finished)
+                return wrapper;
+
+            return wrapped;
+        }
+
+        return wrapper;
+    }
+
+    function lookahead(wrapped)
+    {
+        var wrapper = function(character)
+        {
+            wrapped = wrapped(character);
+
+            finished = wrapped === success || wrapped === failure;
+            matched = wrapped === success;
+
+            if (finished)
+                return failure;
+
+            return wrapper;
+        }
+
+        return wrapper;
+    }
+
+    return function(character)
+    {
+        return [lookahead(parser(rules[id][1], success))(character), dependant(parent)(character)];
     }
 }
 
@@ -164,6 +272,11 @@ function parse(parsers, character)
 }
 
 var rules = [
+                [SEQUENCE, 1, 2],
+                [STRING_LITERAL, "abc"],
+                [NEGATIVE_LOOK_AHEAD, 3],
+                [DOT]
+                /*
                 [NAME, "start", 1],
                 [SEQUENCE, 2, 3, 4, 5, 6, 7],
                 [STRING_LITERAL, "abc"],
@@ -172,9 +285,11 @@ var rules = [
                 [DOT],
                 [CHARACTER_CLASS, "[abc]"],
                 [ONE_OR_MORE, 6]
+                */
             ];
 
-var input = "abcdefdeffcaaa",
+var //input = "abcdefdeffcaaa",
+    input = "abc",
     parsers = [parser(0, success)];
 
 for (i = 0; i < input.length && parsers.length > 0; ++i)
