@@ -128,78 +128,18 @@ factories[OPTIONAL] = function(id, parent, state)
         return [parser(rules[id][1], parent)(character), parent(character)];
     }
 }
-/*
-function stop(p)
-{
-    p.failed = true;
-
-    return failure;
-}
-
-function wait(parent, dependency)
-{
-    var waiter = function()
-    {
-        if (dependency.succeeded)
-            return parent;
-
-        if (dependency.failed)
-            return failure;
-
-        return waiter;
-    }
-}
-
-
-
-factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
-{
-    var finished = 0,
-        succeeded = false;
-
-    function depend(p)
-    {
-        function(character)
-        {
-            var result = parser(character);
-
-            if (!finished)
-                return wrap(result);
-
-            if (!succeeded)
-                return result;
-
-            return failure;
-        }
-    }
-
-    antidepend(p)
-    {
-        var result = p
-
-        finished = true;
-        succeeded = ;
-    }
-
-    return function(character)
-    {
-        x = parser(rules[id][1], function(){ console.log("no!"); return failure(); })(character);
-
-        return [x, wait(parent, parent(character))];
-    }
-}
-*/
 
 factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
 {
     var finished = false,
-        matched = false;
+        matched = false,
+        condition = rules[id][0] === NEGATIVE_LOOK_AHEAD;
 
     function dependant(wrapped)
     {
         var wrapper = function(character)
         {
-            if (finished && matched)
+            if (finished && matched === condition)
                 return failure;
 
             wrapped = wrapped(character);
@@ -237,6 +177,8 @@ factories[NEGATIVE_LOOK_AHEAD] = function(id, parent, state)
     }
 }
 
+factories[POSITIVE_LOOK_AHEAD] = factories[NEGATIVE_LOOK_AHEAD];
+
 function success()
 {
     //console.log("success");
@@ -272,10 +214,11 @@ function parse(parsers, character)
 }
 
 var rules = [
-                [SEQUENCE, 1, 2],
+                [SEQUENCE, 1, 2, 3],
                 [STRING_LITERAL, "abc"],
-                [NEGATIVE_LOOK_AHEAD, 3],
-                [DOT]
+                [POSITIVE_LOOK_AHEAD, 4],
+                [STRING_LITERAL, "def"],
+                [STRING_LITERAL, "d"]
                 /*
                 [NAME, "start", 1],
                 [SEQUENCE, 2, 3, 4, 5, 6, 7],
@@ -289,7 +232,7 @@ var rules = [
             ];
 
 var //input = "abcdefdeffcaaa",
-    input = "abc",
+    input = "abcdef",
     parsers = [parser(0, success)];
 
 for (i = 0; i < input.length && parsers.length > 0; ++i)
