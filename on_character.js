@@ -157,53 +157,45 @@ factories[OPTIONAL] = function(id, parent, state)
 
 factories[NEGATIVE_LOOKAHEAD] = function(id, parent, state)
 {
-    var finished = false,
-        matched = false,
-        condition = rules[id][0] === NEGATIVE_LOOKAHEAD;
+    var lookahead = parser(rules[id][1], success);
 
-    function dependant(parsers)
+    var dependency = function(character)
     {
-        var wrapper = function(character)
-        {
-            if (finished && matched === condition)
-                return [];
+        lookahead = lookahead(character);
+        parent = parent(character);
 
-            parsers = parse(parsers, character);
+        if (lookahead === failure)
+            return parent;
 
-            if (!finished)
-                return wrapper;
+        if (lookahead === success)
+            return failure;
 
-            return parsers;
-        }
-
-        return wrapper;
+        return dependency;
     }
 
-    function lookahead(parsers)
-    {
-        var wrapper = function(character)
-        {
-            wrapped = wrapped(character);
-
-            finished = wrapped === success || wrapped === failure;
-            matched = wrapped === success;
-
-            if (finished)
-                return failure;
-
-            return wrapper;
-        }
-
-        return wrapper;
-    }
-
-    return function(character)
-    {
-        return list(lookahead(parser(rules[id][1], success))(character), dependant(parent)(character));
-    }
+    return dependency;
 }
 
-factories[POSITIVE_LOOKAHEAD] = factories[NEGATIVE_LOOKAHEAD];
+factories[POSITIVE_LOOKAHEAD] = function(id, parent, state)
+{
+    var lookahead = parser(rules[id][1], success);
+
+    var dependency = function(character)
+    {
+        lookahead = lookahead(character);
+        parent = parent(character);
+
+        if (lookahead === success)
+            return parent;
+
+        if (lookahead === failure)
+            return failure;
+
+        return dependency;
+    }
+
+    return dependency;
+}
 
 function success()
 {
@@ -223,8 +215,14 @@ function parser(id, parent, state)
 }
 
 var rules = [
+                [SEQUENCE, 1, 2, 3],
+                [STRING_LITERAL, "abc"],
+                [NEGATIVE_LOOKAHEAD, 4],
+                [STRING_LITERAL, "def"],
+                [STRING_LITERAL, "f"]
+                /*
                 [NAME, "start", 1],
-                [SEQUENCE, 9/*, 5, 6, 7*/],
+                [SEQUENCE, 9, 5, 6, 7],
                 [STRING_LITERAL, "abc"],
                 [STRING_LITERAL, "abcd"],
                 [ORDERED_CHOICE, 2, 3],
@@ -232,9 +230,9 @@ var rules = [
                 [CHARACTER_CLASS, "[abc]"],
                 [ZERO_OR_MORE, 6],
                 [STRING_LITERAL, "d"],
-                [OPTIONAL, 8]
+                [OPTIONAL, 8]*/
             ],
-    input = "",//require("fs").readFileSync(process.argv[2]).toString(),
+    input = "abcdef",//require("fs").readFileSync(process.argv[2]).toString(),
     lang = parser(0, success);
 
 for (i = 0; i < input.length; ++i)
