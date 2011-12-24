@@ -43,6 +43,7 @@ factories[CHARACTER_CLASS] = function(id, parent, state)
 
     return function(character)
     {
+        console.log("[" + character + "]" + " from class: " + rule[1] + " resulting: " + (character !== null && character.match(rule[1])) + " " + (parent === failure));
         if (character !== null && character.match(rule[1]))
             return parent;
 
@@ -55,7 +56,7 @@ factories[STRING_LITERAL] = function(id, parent, state)
     return function(character)
     {
         var string = rules[id][1];
-
+console.log("[" + character + "]" + " from string: " + string + "[" + state + "] = " + string.charAt(state));
         if (string.charAt(state) === character)
         {
             if (state === string.length - 1)
@@ -82,19 +83,44 @@ factories[SEQUENCE] = function(id, parent, state)
     }
 }
 
+function list(parent, first, rest)
+{
+    if (!rest)
+        return first;
+
+    items = function(character)
+    {
+        first = first(character);
+
+        if (first === parent)
+            return parent;
+
+        rest = rest(character);
+
+        if (first === failure)
+            return rest;
+
+        if (rest === failure)
+            return first;
+
+        return items;
+    }
+
+    return items;
+}
+
 factories[ORDERED_CHOICE] = function(id, parent, state)
 {
     return function(character)
     {
         var rule = rules[id],
-            index = 1,
             count = rule.length,
-            parsers = [];
+            parsers = null;
 
-        for (; index < count; ++index)
-            parsers = parsers.concat(parser(rule[index], parent)(character));
+        while (count-- > 1)
+            parsers = list(parent, parser(rule[count], parent), parsers);
 
-        return parsers;
+        return parsers(character);
     }
 }
 
@@ -102,7 +128,7 @@ factories[ZERO_OR_MORE] = function(id, parent, state)
 {
     var result = function(character)
     {
-        return [parser(rules[id][1], result)(character), parent(character)];
+        return list(parent, parser(rules[id][1], result), parent)(character);
     }
 
     return result;
@@ -110,22 +136,22 @@ factories[ZERO_OR_MORE] = function(id, parent, state)
 
 factories[ONE_OR_MORE] = function(id, parent, state)
 {
-    return function(character)
+    var result = function(character)
     {
-        var next = parser(id, parent, state + 1);
-
         if (state === 0)
-            return parser(rules[id][1], next)(character);
+            return parser(rules[id][1], parser(id, parent, state + 1))(character);
 
-        return [parser(rules[id][1], next)(character), parent(character)];
+        return list(parent, parser(rules[id][1], result), parent)(character);
     }
+
+    return result;
 }
 
 factories[OPTIONAL] = function(id, parent, state)
 {
     return function(character)
     {
-        return [parser(rules[id][1], parent)(character), parent(character)];
+        return list(parent, parser(rules[id][1], parent), parent)(character);
     }
 }
 
@@ -135,25 +161,25 @@ factories[NEGATIVE_LOOKAHEAD] = function(id, parent, state)
         matched = false,
         condition = rules[id][0] === NEGATIVE_LOOKAHEAD;
 
-    function dependant(wrapped)
+    function dependant(parsers)
     {
         var wrapper = function(character)
         {
             if (finished && matched === condition)
-                return failure;
+                return [];
 
-            wrapped = wrapped(character);
+            parsers = parse(parsers, character);
 
             if (!finished)
                 return wrapper;
 
-            return wrapped;
+            return parsers;
         }
 
         return wrapper;
     }
 
-    function lookahead(wrapped)
+    function lookahead(parsers)
     {
         var wrapper = function(character)
         {
@@ -173,7 +199,7 @@ factories[NEGATIVE_LOOKAHEAD] = function(id, parent, state)
 
     return function(character)
     {
-        return [lookahead(parser(rules[id][1], success))(character), dependant(parent)(character)];
+        return list(lookahead(parser(rules[id][1], success))(character), dependant(parent)(character));
     }
 }
 
@@ -196,52 +222,28 @@ function parser(id, parent, state)
     return factories[rules[id][0]](id, parent, state || 0);
 }
 
-function isNotFailure(parser)
-{
-    return parser !== failure;
-}
-
-function parse(parsers, character)
-{
-    var index = 0,
-        count = parsers.length,
-        results = [];
-
-    for (; index < count; ++index)
-        results = results.concat(parsers[index](character));
-
-    return results.filter(isNotFailure);
-}
-
 var rules = [
-                [SEQUENCE, 1, 2, 3],
-                [STRING_LITERAL, "abc"],
-                [POSITIVE_LOOKAHEAD, 4],
-                [STRING_LITERAL, "def"],
-                [STRING_LITERAL, "d"]
-                /*
                 [NAME, "start", 1],
-                [SEQUENCE, 2, 3, 4, 5, 6, 7],
+                [SEQUENCE, 9/*, 5, 6, 7*/],
                 [STRING_LITERAL, "abc"],
-                [STRING_LITERAL, "def"],
+                [STRING_LITERAL, "abcd"],
                 [ORDERED_CHOICE, 2, 3],
                 [DOT],
                 [CHARACTER_CLASS, "[abc]"],
-                [ONE_OR_MORE, 6]
-                */
-            ];
+                [ZERO_OR_MORE, 6],
+                [STRING_LITERAL, "d"],
+                [OPTIONAL, 8]
+            ],
+    input = "",//require("fs").readFileSync(process.argv[2]).toString(),
+    lang = parser(0, success);
 
-var //input = "abcdefdeffcaaa",
-    input = "abcdef",
-    parsers = [parser(0, success)];
+for (i = 0; i < input.length; ++i)
+    lang = lang(input.charAt(i));
 
-for (i = 0; i < input.length && parsers.length > 0; ++i)
-    parsers = parse(parsers, input.charAt(i));
+while (lang !== success && lang !== failure)
+    lang = lang(null);
 
-while (parsers.length > 0 && parsers[0] !== success)
-    parsers = parse(parsers, null);
-
-if (parsers.length > 0)
-    console.log("success " + parsers.length);
+if (lang === success)
+    console.log("success");
 else
     console.log("failure");
