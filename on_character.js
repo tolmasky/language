@@ -163,7 +163,7 @@ factories[ZERO_OR_MORE] = function(id, parent, state)
 {
     var result = function(character)
     {
-        return list(parent, parser(rules[id][1], result), parent)(character);
+        return list(result, parser(rules[id][1], result), parent)(character);
     }
 
     return result;
@@ -176,7 +176,7 @@ factories[ONE_OR_MORE] = function(id, parent, state)
         if (state === 0)
             return parser(rules[id][1], parser(id, parent, state + 1))(character);
 
-        return list(parent, parser(rules[id][1], result), parent)(character);
+        return list(result, parser(rules[id][1], result), parent)(character);
     }
 
     return result;
@@ -259,7 +259,7 @@ if (true)
 {
 var json = JSON.parse(require("fs").readFileSync("/Users/tolmasky/Development/language/ParserSpeed/language2.js/grammar.json").toString()),
     rules = json["table"],
-    input = require("fs").readFileSync(process.argv[2]).toString(),
+    input = require("fs").readFileSync("/Users/tolmasky/Development/language/on_character.js"/*process.argv[2]*/).toString(),
     lang = parser(json["nameToUID"]["start"], success);//187
 }
 else
@@ -267,7 +267,7 @@ else
 var json = JSON.parse(require("fs").readFileSync("/Users/tolmasky/Development/language/ParserSpeed/language2.js/simpler.json").toString()),
     rules = json["table"],
     input = "a",
-    lang = parser(json["nameToUID"]["start"], success);
+    lang = parser(json["nameToUID"]["AssignmentExpression"], success);
 }
 okidoke = false;
 for (i = 0; i < input.length; ++i)
