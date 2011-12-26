@@ -18,7 +18,7 @@ var factories = [];
 factories[NAME] = function(id, parent, state)
 {
     return s = function(character)
-    {console.log(s.tabs + "into " + rules[id][1] + " " + rules[id] + " -> " + rules[id][2]);
+    {//console.log(s.tabs + "into " + rules[id][1] + " " + rules[id] + " -> " + rules[id][2]);
         return parser(rules[id][2], parent)(character);
     }
 }
@@ -26,7 +26,7 @@ factories[NAME] = function(id, parent, state)
 factories[DOT] = function(id, parent, state)
 {
     return function(character)
-    {console.log(i + " [" + character + "] accept any");
+    {//console.log(i + " [" + character + "] accept any");
         if (character === null)
             return failure;
 
@@ -43,7 +43,7 @@ factories[CHARACTER_CLASS] = function(id, parent, state)
 
     return function(character)
     {
-        console.log(i + " [" + character + "]" + " from class: " + rule[1] + " resulting: " + (character !== null && character.match(rule[1])) + " " + (parent === failure));
+        //console.log(i + " [" + character + "]" + " from class: " + rule[1] + " resulting: " + (character !== null && character.match(rule[1])) + " " + (parent === failure));
         if (character !== null && character.match(rule[1]))
             return parent;
 
@@ -56,7 +56,7 @@ factories[STRING_LITERAL] = function(id, parent, state)
     return function(character)
     {
         var string = rules[id][1];
-console.log(i + " [" + character + "]" + " from string: " + string + "[" + state + "] = " + string.charAt(state));
+//console.log(i + " [" + character + "]" + " from string: " + string + "[" + state + "] = " + string.charAt(state));
         if (string.charAt(state) === character)
         {
             if (state === string.length - 1)
@@ -94,19 +94,16 @@ factories[SEQUENCE] = function(id, parent, state)
         if (index < rule.length - 1)
             parent = parser(id, parent, index);
 
-        console.log("=> " + id + " { " + rule.fancyPrint(index) + "} p = " + parent.id);
+        //console.log("=> " + id + " { " + rule.fancyPrint(index) + "} p = " + parent.id);
 
         return parser(rule[index], parent)(character);
     }
 }
 
-function isInParent(ancestor, parent)
+function hasParent(parser, parent)
 {
-    while (ancestor = ancestor.parent)
-        if (ancestor === parent)
-            break;
-
-    return !!ancestor;
+    var parserParent = parser.parent
+    return parserParent && (parserParent === parent || hasParent(parserParent, parent));
 }
 
 function list(parent, first, rest)
@@ -117,10 +114,10 @@ function list(parent, first, rest)
     var items = function(character)
     {
         var r = rest;
-        console.log("-> " + items.id + " " + first.state + " and rest is " + rest.id);
+        //console.log("-> " + items.id + " " + first.state + " and rest is " + rest.id);
         var firstResult = first(character);
-        console.log("just called " + items.id + " " + firstResult.id + " " + rest.id);
-        if (firstResult !== failure && !isInParent(firstResult, parent))
+        //console.log("just called " + items.id + " " + firstResult.id + " " + rest.id);
+        if (firstResult !== failure && !hasParent(firstResult, parent))
             return firstResult;
 
 //        if (firstResult.parent !== parent)
@@ -132,11 +129,11 @@ function list(parent, first, rest)
             console.log("CRAZY for " + items.id);
             return firstResult;
         }
-    console.log("???" + rest.id + " " + (rest === r));
-if (rest.id === "2@1") console.log(rest);
+    //console.log("???" + rest.id + " " + (rest === r));
+
         var restResult = rest(character);
-        console.log("-> " + items.id + " " + first.state + " => " + firstResult.id + " vs. " + restResult.id);
-        if (firstResult === failure){console.log("yes");
+//        console.log("-> " + items.id + " " + first.state + " => " + firstResult.id + " vs. " + restResult.id);
+        if (firstResult === failure){//console.log("yes");
             return restResult;}
 
         if (restResult === failure)
@@ -146,30 +143,27 @@ if (rest.id === "2@1") console.log(rest);
     };
     items.id = "(" + first.id + ") (" + rest.id + ")";
     items.parent = parent;
-    console.log("MAKING CHOICE " + items.id + " p = " + parent.id);
+//    console.log("MAKING CHOICE " + items.id + " p = " + parent.id);
     return items;
 }
 
 factories[ORDERED_CHOICE] = function(id, parent, state)
 {
-    return function(character)
-    {
-        var rule = rules[id],
-            count = rule.length,
-            parsers = null;
+    var rule = rules[id],
+        count = rule.length,
+        parsers = null;
 
-        while (count-- > 1)
-            parsers = list(parent, parser(rule[count], parent), parsers);
+    while (count-- > 1)
+        parsers = list(parent, parser(rule[count], parent), parsers);
 
-        return parsers(character);
-    }
+    return parsers;
 }
 
 factories[ZERO_OR_MORE] = function(id, parent, state)
 {
     var result = function(character)
     {
-        return list(result, parser(rules[id][1], result), parent)(character);
+        return list(parent, parser(rules[id][1], result), parent)(character);
     }
 
     return result;
@@ -182,7 +176,7 @@ factories[ONE_OR_MORE] = function(id, parent, state)
         if (state === 0)
             return parser(rules[id][1], parser(id, parent, state + 1))(character);
 
-        return list(result, parser(rules[id][1], result), parent)(character);
+        return list(parent, parser(rules[id][1], result), parent)(character);
     }
 
     return result;
@@ -191,11 +185,6 @@ factories[ONE_OR_MORE] = function(id, parent, state)
 factories[OPTIONAL] = function(id, parent, state)
 {
     return list(parent, parser(rules[id][1], parent), parent);
-
-    return function(character)
-    {
-        return list(parent, parser(rules[id][1], parent), parent)(character);
-    }
 }
 
 factories[NEGATIVE_LOOKAHEAD] = function(id, parent, state)
@@ -270,8 +259,8 @@ if (true)
 {
 var json = JSON.parse(require("fs").readFileSync("/Users/tolmasky/Development/language/ParserSpeed/language2.js/grammar.json").toString()),
     rules = json["table"],
-    input = ".4e-10",//require("fs").readFileSync(process.argv[2]).toString(),
-    lang = parser(json["nameToUID"]["AssignmentExpression"], success);//187
+    input = require("fs").readFileSync(process.argv[2]).toString(),
+    lang = parser(json["nameToUID"]["start"], success);//187
 }
 else
 {
@@ -287,6 +276,7 @@ for (i = 0; i < input.length; ++i)
     lang = lang(input.charAt(i));
 }
 okidoke = true;
+console.log("IS SUCCESS " + (lang === success))
 //return;
 while (lang !== success && lang !== failure)
 {
