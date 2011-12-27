@@ -1,4 +1,34 @@
 
+/*
+funcion parser(character, next)
+{
+    do_();
+    return next(character);
+}
+
+function parser(character, next)
+{
+    do_();
+
+    return next_marker;
+
+    return call_next_marker;
+}
+
+function cachedCall(parser, character)
+{
+    var next = parser(character);
+
+    if (next === next_marker)
+        return parser.next;
+
+    if (next === call_next_marker)
+        return cachedCall(parser.next, character);
+
+    return next;
+}
+*/
+
 var NAME                = 0,
     DOT                 = 1,
     CHARACTER_CLASS     = 2,
@@ -102,12 +132,16 @@ console.log("GOT BACK " + firstResult.hash);
 
         if (firstResult === markCalled)
             return next(character);
+
+        //if (firstResult === markCalled){console.log("then here?");
+        //    return next(character);}
             if (!firstResult.hash)
                 console.log(firstResult + "");
 if (firstResult.hash && firstResult.hash.substr(0, 4) === "MARK")
     console.log("WTF " + character);
+    console.log("calling rest " + rest.hash);
         var restResult = rest(character);
-
+console.log("done callng rest " + restResult);
         if (firstResult === failure)
             return restResult;
 
@@ -128,7 +162,7 @@ function choice(id, next, rest)
 {console.log("IM MARKING " + next.hash);
     function mark(character)
     {
-        console.log("called with " + character + " " + next);
+        console.log(mark.hash + " called with " + character + " " + next);
         return markCalled;
     }
 
@@ -177,6 +211,7 @@ factories[ONE_OR_MORE] = function(id, next, state)
 
 factories[OPTIONAL] = function(id, next, state)
 {
+    console.log("THE OPTIONAL IS " + rules[rules[id][1]]);
     return choice(rules[id][1], next, next);
 }
 
@@ -187,10 +222,10 @@ function dependency(lookahead, parser, expected, unexpected)
         var lookaheadResult = lookahead(character),
             parserResult = parser(character);
 
-        if (lookahead === expected)
+        if (lookaheadResult === expected)
             return parserResult;
 
-        if (lookahead === unexpected)
+        if (lookaheadResult === unexpected)
             return failure;
 
         return dependency(lookaheadResult, parserResult, expected, unexpected);
@@ -233,19 +268,18 @@ function description(id)
 {
     switch (rules[id][0])
     {
-        case NAME:              return "(" + rules[id][1] + ") ";
-        case DOT:               return "[DOT] ";
-        case CHARACTER_CLASS:   return rules[id][1] + " ";
-        case ORDERED_CHOICE:    return "[CHOICE] ";
-        case SEQUENCE:          return "[SEQ] ";
-        case STRING_LITERAL:    return "\"" + rules[id][1] + "\" ";
-/*
-    ZERO_OR_MORE        = 6,
-    ONE_OR_MORE         = 7,
-    OPTIONAL            = 8,
-    NEGATIVE_LOOKAHEAD  = 9,
-    POSITIVE_LOOKAHEAD  = 10,
-    ERROR_NAME          = 11,
+        case NAME:                  return "(" + rules[id][1] + ") ";
+        case DOT:                   return "[DOT] ";
+        case CHARACTER_CLASS:       return rules[id][1] + " ";
+        case ORDERED_CHOICE:        return "[CHOICE] ";
+        case SEQUENCE:              return "[SEQ] ";
+        case STRING_LITERAL:        return "\"" + rules[id][1] + "\" ";
+        case ZERO_OR_MORE:          return "[*] ";
+        case ONE_OR_MORE:           return "[+] ";
+        case OPTIONAL:              return "[?] ";
+        case NEGATIVE_LOOKAHEAD:    return "[NEG] ";
+        case POSITIVE_LOOKAHEAD:    return "[POS] ";
+/*    ERROR_NAME          = 11,
     ERROR_CHOICE        = 12;*/
     }
     
@@ -277,7 +311,7 @@ function read(path)
 
 var json = JSON.parse(read(process.argv[2])),
     rules = json["table"],
-    input = process.argv[3],//read(process.argv[3]),
+    input = read(process.argv[3]),
     lang = parser(json["nameToUID"]["start"], success);//DecimalLiteral
 console.log(input);
 for (i = 0; i < input.length; ++i)
