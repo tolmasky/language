@@ -35,7 +35,7 @@ factories[CHARACTER_CLASS] = function(id, next, state)
     var rule = rules[id];
 
     if (typeof rule[1].valueOf() === "string")
-        rule[1] = new RegExp(rule[1], "g");
+        rule[1] = new RegExp(rule[1]);
 
     return function(character)
     {
@@ -223,7 +223,7 @@ function failure()
     return failure;
 }
 
-failure.id = "f";
+failure.id = "failure";
 failure.nameo = "faliure";
 failure.hash = "failure";
 
@@ -278,8 +278,8 @@ function read(path)
 var json = JSON.parse(read(process.argv[2])),
     rules = json["table"],
     input = process.argv[3],//read(process.argv[3]),
-    lang = parser(json["nameToUID"]["LeftHandSideExpression"], success);//DecimalLiteral
-console.log(rules);
+    lang = parser(json["nameToUID"]["start"], success);//DecimalLiteral
+console.log(input);
 for (i = 0; i < input.length; ++i)
 {
     console.log("[" + i + "] = " + input.charAt(i) + " : " + lang.hash);
