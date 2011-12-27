@@ -89,45 +89,82 @@ captured.hash = parser.hash;
     return captured;
 }
 
-function choice(first, rest, captured)
+function markedChoice(first, rest, next, mark, markCalled)
 {
-    return function(character)
+    var f = function(character)
     {
+console.log("GOING IN!");
         var firstResult = first(character);
+console.log("GOT BACK " + firstResult.hash);
+        // if first's next got called...
+        if (firstResult === mark)
+            return next;
 
-        if (firstResult === captured)
-            return firstResult(null, true);
-
+        if (firstResult === markCalled)
+            return next(character);
+            if (!firstResult.hash)
+                console.log(firstResult + "");
+if (firstResult.hash && firstResult.hash.substr(0, 4) === "MARK")
+    console.log("WTF " + character);
         var restResult = rest(character);
 
         if (firstResult === failure)
             return restResult;
 
-        if (restResult === failure)
-            return firstResult;
+//        if (restResult === failure)
+//            return firstResult;
 
-        return choice(firstResult, restResult, captured);
+        return markedChoice(firstResult, restResult, next, mark, markCalled);
     }
+    f.firster = first;
+    f.mark = mark;
+    f.hash = "(" + first.hash + " OR " + rest.hash + ")";
+    return f;
+}
+
+var counter = 0;
+
+function choice(id, next, rest)
+{console.log("IM MARKING " + next.hash);
+    function mark(character)
+    {
+        console.log("called with " + character + " " + next);
+        return markCalled;
+    }
+
+    function markCalled(character)
+    {
+        console.log("should never happen");
+        return markCalled;
+    }
+mark.hash = "MARKED(" + counter + ")[" + next.hash + "]";
+markCalled.hash = "MARKED_CALLED(" + (counter++) + ")[" + next.hash + "]";
+    return markedChoice(parser(id, mark), rest, next, mark, markCalled);
 }
 
 factories[ORDERED_CHOICE] = function(id, next, state)
-{
+{console.log("brand new!");
+    var rule = rules[id],
+        index = state + 1;
+
+    if (index < rule.length - 1)
+        return choice(rule[index], next, parser(id, next, index));
+
+    return parser(rule[index], next);
+
     var rule = rules[id],
         count = rule.length,
-        parsers = parser(rule[--count], next),
-        captured = capture(next);
+        parsers = parser(rule[--count], next);
 
     while (count-- > 1)
-        parsers = choice(parser(rule[count], captured), parsers, captured);
+        parsers = choice(rule[count], next, parsers);
 
     return parsers;
 }
 
 factories[ZERO_OR_MORE] = function(id, next, state)
 {
-    var captured = capture(parser(id, next, state + 1));
-
-    return choice(parser(rules[id][1], captured), next, captured);
+    return choice(rules[id][1], parser(id, next, state + 1), next);
 }
 
 factories[ONE_OR_MORE] = function(id, next, state)
@@ -135,16 +172,12 @@ factories[ONE_OR_MORE] = function(id, next, state)
     if (state === 0)
         return parser(rules[id][1], parser(id, next, state + 1));
 
-    var captured = capture(parser(id, next, state + 1));
-
-    return choice(parser(rules[id][1], captured), next, captured);
+    return choice(rules[id][1], parser(id, next, state + 1), next);
 }
 
 factories[OPTIONAL] = function(id, next, state)
 {
-    var captured = capture(next);
-
-    return choice(parser(rules[id][1], captured), next, captured);
+    return choice(rules[id][1], next, next);
 }
 
 function dependency(lookahead, parser, expected, unexpected)
@@ -195,7 +228,7 @@ failure.nameo = "faliure";
 failure.hash = "failure";
 
 var parserCache = { };
-
+okidoke = false;
 function description(id)
 {
     switch (rules[id][0])
@@ -220,7 +253,7 @@ function description(id)
 }
 
 function parser(id, next, state)
-{
+{parserCache = { };
     var hash = id + "@" + (state || 0) + " -> " + next.hash;
 
     if (parserCache.hasOwnProperty(hash))
@@ -245,19 +278,23 @@ function read(path)
 var json = JSON.parse(read(process.argv[2])),
     rules = json["table"],
     input = process.argv[3],//read(process.argv[3]),
-    lang = parser(json["nameToUID"]["DecimalLiteral"], success);
-
+    lang = parser(json["nameToUID"]["LeftHandSideExpression"], success);//DecimalLiteral
+console.log(rules);
 for (i = 0; i < input.length; ++i)
 {
     console.log("[" + i + "] = " + input.charAt(i) + " : " + lang.hash);
     lang = lang(input.charAt(i));
     console.log("[" + i + "] = " + input.charAt(i) + " : " + lang.hash);
+    parserCache = { };
 }
-
-console.log("DONE AT INPUT END " + (lang === success) + " " + lang);
+okidoke = true;
+console.log("DONE AT INPUT END " + (lang === success) + " " + lang + " " + (lang.firster ? lang.firster.hash + " " + (lang.mark === lang.firster) : ""));
 
 while (lang !== success && lang !== failure)
+{
     lang = lang(null);
+    parserCache = { };
+}
 
 if (lang === success)
     console.log("success");
