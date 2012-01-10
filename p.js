@@ -45,13 +45,13 @@ var NAME                = 0,
 
 var factories = [];
 
-factories[NAME] = function(id, next, state)
+factories[NAME] = function(self, id, next, state)
 {
     // No actual work is done here, just pass it down the line.
-    return parser(rules[id][2], next);
+    return create(rules[id][2], next, self);
 }
 
-factories[DOT] = function(id, next, state)
+factories[DOT] = function(self, id, next, state)
 {
     // Always succeed except if passed the end of the input.
     return function(character)
@@ -60,7 +60,7 @@ factories[DOT] = function(id, next, state)
     }
 }
 
-factories[CHARACTER_CLASS] = function(id, next, state)
+factories[CHARACTER_CLASS] = function(self, id, next, state)
 {
     var rule = rules[id];
 
@@ -76,9 +76,9 @@ factories[CHARACTER_CLASS] = function(id, next, state)
     }
 }
 
-factories[STRING_LITERAL] = function(id, next, state)
+factories[STRING_LITERAL] = function(self, id, next, state)
 {
-    return function(character)
+    return function (character)
     {
         var string = rules[id][1],
             length = string.length;
@@ -87,137 +87,103 @@ factories[STRING_LITERAL] = function(id, next, state)
             return length === 0 ? next : failure;
 
         if (string.charAt(state) === character)
-            return state === length - 1 ? next : parser(id, next, state + 1);
+            return state === length - 1 ? next : create(id, next, self, state + 1);
 
         return failure;
     }
 }
-
-factories[SEQUENCE] = function(id, next, state)
+//id next parent
+factories[SEQUENCE] = function(self, id, next, state)
 {
     var rule = rules[id],
         index = state + 1;
 
     if (index < rule.length - 1)
-        return parser(rule[index], parser(id, next, index));
+        return create(rule[index], create(id, next, self, index), self);
 
-    return parser(rule[index], next);
+    return create(rule[index], next, self);
 }
 
-function capture(parser)
+function inTree(parser, parent)
 {
-    var captured = function(character, uncapture)
-    {
-        if (uncapture)
-            return parser;
+    if (!parser)
+        return false;
 
-        parser = parser(character);
-captured.hash = parser.hash;
-        return parser === failure ? parser : captured;
-    }
-captured.hash = parser.hash;
-    return captured;
+    if (parser === parent)
+        return true;
+
+    return inTree(parser.parent, parent);
 }
 
-function markedChoice(first, rest, next, mark, markCalled)
-{
-    var f = function(character)
+function choice(first, rest, parent)
+{console.log("creating with " + first.hash);
+    var parser = function(character)
     {
-console.log("GOING IN!");
         var firstResult = first(character);
-console.log("GOT BACK " + firstResult.hash);
-        // if first's next got called...
-        if (firstResult === mark)
-            return next;
-
-        if (firstResult === markCalled)
-            return next(character);
-
-        //if (firstResult === markCalled){console.log("then here?");
-        //    return next(character);}
-            if (!firstResult.hash)
-                console.log(firstResult + "");
-if (firstResult.hash && firstResult.hash.substr(0, 4) === "MARK")
-    console.log("WTF " + character);
-    console.log("calling rest " + rest.hash);
+//console.log(firstResult.hash + " " + first.hash + " " + (firstResult !== failure && !inTree(firstResult, first)));
+        // can't do inTree(firstResult, first) becuase first changes as we advnace and keep creating new choice(s).
+        if (firstResult !== failure && !inTree(firstResult, parent)){console.log("oh boy " + firstResult.hash);
+            return firstResult;}
+// CN console.log("all he way in");
         var restResult = rest(character);
-console.log("done callng rest " + restResult);
+// CN console.log("all he way in 2");
+
+//if (first.id && (description(first.id).indexOf("NumericLiteral") !== -1))
+console.log("twe " + (restResult === failure));
         if (firstResult === failure)
             return restResult;
 
-//        if (restResult === failure)
-//            return firstResult;
+        if (restResult === failure)
+            return firstResult;
 
-        return markedChoice(firstResult, restResult, next, mark, markCalled);
+        return choice(firstResult, restResult, parent);
     }
-    f.firster = first;
-    f.mark = mark;
-    f.hash = "(" + first.hash + " OR " + rest.hash + ")";
-    return f;
+//console.log(parser+"");
+    parser.hash = "(" + first.hash + " OR " + rest.hash + ")";
+    parser.parent = parent;
+
+    return parser;
 }
 
-var counter = 0;
-
-function choice(id, next, rest)
-{console.log("IM MARKING " + next.hash);
-    function mark(character)
-    {
-        console.log(mark.hash + " called with " + character + " " + next);
-        return markCalled;
-    }
-
-    function markCalled(character)
-    {
-        console.log("should never happen");
-        return markCalled;
-    }
-mark.hash = "MARKED(" + counter + ")[" + next.hash + "]";
-markCalled.hash = "MARKED_CALLED(" + (counter++) + ")[" + next.hash + "]";
-    return markedChoice(parser(id, mark), rest, next, mark, markCalled);
-}
-
-factories[ORDERED_CHOICE] = function(id, next, state)
-{console.log("brand new!");
+factories[ORDERED_CHOICE] = function(self, id, next, state)
+{
     var rule = rules[id],
         index = state + 1;
 
     if (index < rule.length - 1)
-        return choice(rule[index], next, parser(id, next, index));
+    {
+        var f,r;
+        var c = choice(f = create(rule[index], next, self), r = create(id, next, self, index), self);
+        f.parent = c;
+        r.parent = c;
+        return c;
+    }
 
-    return parser(rule[index], next);
-
-    var rule = rules[id],
-        count = rule.length,
-        parsers = parser(rule[--count], next);
-
-    while (count-- > 1)
-        parsers = choice(rule[count], next, parsers);
-
-    return parsers;
+    return create(rule[index], next, self);
 }
 
-factories[ZERO_OR_MORE] = function(id, next, state)
+factories[ZERO_OR_MORE] = function(self, id, next, state)
 {
-    return choice(rules[id][1], parser(id, next, state + 1), next);
+    return choice(create(rules[id][1], create(id, next, self, state + 1), self), next, self);
 }
 
-factories[ONE_OR_MORE] = function(id, next, state)
+factories[ONE_OR_MORE] = function(self, id, next, state)
 {
     if (state === 0)
-        return parser(rules[id][1], parser(id, next, state + 1));
+        return create(rules[id][1], create(id, next, self, state + 1), self);
 
-    return choice(rules[id][1], parser(id, next, state + 1), next);
+    return choice(create(rules[id][1], create(id, next, self, state + 1), self), next, self);
 }
 
-factories[OPTIONAL] = function(id, next, state)
+factories[OPTIONAL] = function(self, id, next, state)
 {
     console.log("THE OPTIONAL IS " + rules[rules[id][1]]);
-    return choice(rules[id][1], next, next);
+    return choice(create(rules[id][1], next, self), next, self);
 }
 
-function dependency(lookahead, parser, expected, unexpected)
+function dependency(lookahead, parser, parent, expected, unexpected)
 {
-    return function(character)
+    function result(character)
     {
         var lookaheadResult = lookahead(character),
             parserResult = parser(character);
@@ -228,18 +194,23 @@ function dependency(lookahead, parser, expected, unexpected)
         if (lookaheadResult === unexpected)
             return failure;
 
-        return dependency(lookaheadResult, parserResult, expected, unexpected);
+        return dependency(lookaheadResult, parserResult, result, expected, unexpected);
     }
-} 
 
-factories[NEGATIVE_LOOKAHEAD] = function(id, next, state)
-{
-    return dependency(parser(rules[id][1], success), next, failure, success);
+    result.hash = "x";
+    result.parent = parent;
+
+    return result;
 }
 
-factories[POSITIVE_LOOKAHEAD] = function(id, next, state)
+factories[NEGATIVE_LOOKAHEAD] = function(self, id, next, state)
 {
-    return dependency(parser(rules[id][1], success), next, success, failure);
+    return dependency(create(rules[id][1], success, self), next, self, failure, success);
+}
+
+factories[POSITIVE_LOOKAHEAD] = function(self, id, next, state)
+{
+    return dependency(create(rules[id][1], success, self), next, self, success, failure);
 }
 
 function success()
@@ -282,13 +253,38 @@ function description(id)
 /*    ERROR_NAME          = 11,
     ERROR_CHOICE        = 12;*/
     }
-    
+
     return "";
 }
 
-function parser(id, next, state)
-{parserCache = { };
-    var hash = id + "@" + (state || 0) + " -> " + next.hash;
+function p2s(parser)
+{
+    var spaces = "";
+
+    while (parser)
+    {
+        spaces += " ";
+        parser = parser.parent;
+    }
+
+    return spaces;
+}
+
+function create(id, next, parent, state)
+{
+    function parser(character)
+    {
+        console.log(p2s(parser) + "entering " + description(id) + " " + parser.hash);
+        return factories[rules[id][0]](parser, id, next, state || 0)(character);
+    }
+
+    parser.id = id;
+    parser.hash = id + "@" + (state || 0) + " -> " + next.hash;
+    parser.parent = parent;
+
+    return parser;
+/*
+    parserCache = { };
 
     if (parserCache.hasOwnProperty(hash))
         return parserCache[hash];
@@ -302,6 +298,7 @@ function parser(id, next, state)
     parserCache[hash].hash = hash;
 
     return parserCache[hash];
+*/
 }
 
 function read(path)
@@ -311,8 +308,8 @@ function read(path)
 
 var json = JSON.parse(read(process.argv[2])),
     rules = json["table"],
-    input = read(process.argv[3]),
-    lang = parser(json["nameToUID"]["start"], success);//DecimalLiteral
+    input = read(process.argv[3]), //.4e+10
+    lang = create(json["nameToUID"]["start"], success);//DecimalLiteral
 console.log(input);
 for (i = 0; i < input.length; ++i)
 {
