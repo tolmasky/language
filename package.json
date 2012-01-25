@@ -20,7 +20,7 @@
                         "url": "http://github.com/tolmasky/language/issues"
                     },
     "engines":      {
-                        "node": "0.4 || 0.5"
+                        "node": ">= 0.4.0"
                     },
     "homepage":     "http://languagejs.com",
     "repository":   {
