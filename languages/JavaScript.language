@@ -152,7 +152,7 @@ LabelledStatement =
 // 12.13 The throw Statement
 
 ThrowStatement =
-    THROW __ (SemicolonInsertionEOS / Expression EOS)
+    THROW __ Expression EOS
 
 // 12.14 The try Statement
 
