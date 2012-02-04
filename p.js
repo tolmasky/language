@@ -1,6 +1,6 @@
 
 /*
-funcion parser(character, next)
+function parser(character, next)
 {
     do_();
     return next(character);
@@ -230,7 +230,7 @@ function failure()
 }
 
 failure.id = "failure";
-failure.nameo = "faliure";
+failure.nameo = "failure";
 failure.hash = "failure";
 
 var parserCache = { };
