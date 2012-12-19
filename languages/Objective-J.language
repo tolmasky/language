@@ -23,7 +23,10 @@ FunctionExpression =
     FUNCTION _ Identifier? _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
 
 FormalParameterList =
-    Identifier (_ "," _ Identifier)*
+    FunctionParameterIdentifier (_ "," _ FunctionParameterIdentifier)*
+
+FunctionParameterIdentifier =
+    Identifier
 
 // 12 Statements
 
@@ -66,10 +69,13 @@ VariableStatement =
   VAR _ VariableDeclaration (_ "," _ VariableDeclaration)* EOS
 
 VariableDeclaration =
-  Identifier (_ "=" !("=") _ AssignmentExpression)?
+  VariableIdentifier (_ "=" !("=") _ AssignmentExpression)?
 
 VariableDeclarationNoIn =
-  Identifier (_ "=" !("=") _ AssignmentExpressionNoIn)?
+  VariableIdentifier (_ "=" !("=") _ AssignmentExpressionNoIn)?
+
+VariableIdentifier =
+    Identifier
 
 VariableDeclarationListNoIn =
   VariableDeclarationNoIn (_ "," _ VariableDeclarationNoIn)*
@@ -227,7 +233,10 @@ IvarTypeElement =
     !((IdentifierName / "@outlet") _ (Accessors / EOS / ",")) (IdentifierName / "@outlet")
 
 IvarDeclaration =
-    Identifier _ Accessors?
+    IvarIdentifier _ Accessors?
+
+IvarIdentifier =
+    Identifier
 
 Accessors =
     "@accessors" ("(" (AccessorsConfiguration (_ "," _ AccessorsConfiguration)*)? ")")?
@@ -289,10 +298,13 @@ KeywordSelector =
     KeywordDeclarator (_ KeywordDeclarator)*
 
 KeywordDeclarator =
-    SelectorDeclaration Parameter
+    SelectorDeclaration MethodParameter
 
-Parameter =
-    (_ MethodType)? _ Identifier
+MethodParameter =
+    (_ MethodType)? _ MethodParameterIdentifier
+
+MethodParameterIdentifier =
+    Identifier
 
 SelectorDeclaration =
     (Selector _)? ":"
@@ -473,11 +485,14 @@ ArgumentList =
 
 PrimaryExpression =
     THIS /
-    Identifier /
+    IdentifierExpression /
     Literal /
     ArrayLiteral /
     ObjectLiteral /
     "(" _ Expression _ ")"
+
+IdentifierExpression =
+    Identifier
 
 MessageExpression =
     "[" _ (SUPER / Expression) _ SelectorCall _ "]"
