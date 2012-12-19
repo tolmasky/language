@@ -195,15 +195,24 @@ StandardFilePath =
 // 12.[17] Class Declaration Statement
 
 ClassDeclarationStatement =
-    "@implementation" _ Identifier _ (SuperclassDeclaration / CategoryDeclaration)? _
-    ("{"
-        (_ CompoundIvarDeclaration)* _
-    "}")?
+    ClassHeader
     _ ClassBody _
     "@end" EOS
 
+ClassHeader =
+    "@implementation" _ ClassName _ (SuperclassDeclaration / CategoryDeclaration)? _
+    ("{"
+        (_ CompoundIvarDeclaration)* _
+    "}")?
+
+ClassName =
+   Identifier
+
 SuperclassDeclaration =
-    ":" _ Identifier
+    ":" _ SuperClassName
+
+SuperClassName =
+    Identifier
 
 CategoryDeclaration =
     "(" _ Identifier _ ")"
@@ -251,25 +260,42 @@ ClassElement =
     FunctionDeclaration
 
 ClassMethodDeclaration =
-    "+" (_ MethodType)? _ MethodSelector _ ";"? _
-    "{" _ FunctionBody _ "}"
+    ClassMethodSignifier _ MethodDeclaration
 
 InstanceMethodDeclaration =
-    "-" (_ MethodType)? _ MethodSelector _ ";"? _
+    InstanceMethodSignifier _ MethodDeclaration
+
+ClassMethodSignifier =
+    "+"
+
+InstanceMethodSignifier =
+    "-"
+
+MethodDeclaration =
+    MethodSignature _ ";"?
     "{" _ FunctionBody _ "}"
+
+MethodSignature =
+    MethodType? _ MethodSelector
 
 MethodSelector =
     KeywordSelector (_ "," _ "...")? / // Paramter type list?
-    UnarySelector
+    UnarySelectorDeclaration
 
-UnarySelector =
+UnarySelectorDeclaration =
     Selector
 
 KeywordSelector =
     KeywordDeclarator (_ KeywordDeclarator)*
 
 KeywordDeclarator =
-    (Selector _)? ":" (_ MethodType)? _ Identifier
+    SelectorDeclaration Parameter
+
+Parameter =
+    (_ MethodType)? _ Identifier
+
+SelectorDeclaration =
+    (Selector _)? ":"
 
 Selector =
     IdentifierName
@@ -462,16 +488,22 @@ SUPER = "super" !IdentifierPart
 
 SelectorCall =
     KeywordSelectorCall (_ "," _ Expression)* /
-    UnarySelector
+    UnarySelectorCall
+
+UnarySelectorCall =
+    Selector
 
 KeywordSelectorCall =
     KeywordCall (_ KeywordCall)*
 
+SelectorPiece =
+    Selector? _ ":"
+
 KeywordCall =
-    Selector? _ ":" _ Expression
+    SelectorPiece _ Expression
 
 ArrayLiteral =
-    "[" _ ElementList _ "]"
+    (ObjectiveJLiteralMarker _)? "[" _ ElementList _ "]"
 
 // AssignmentExpressions can't be next to eachother without a comma separating them.
 ElementList =
@@ -552,8 +584,11 @@ HexIntegerLiteral =
 HexDigit =
     [0-9a-fA-F]
 
+ObjectiveJLiteralMarker =
+    "@"
+
 StringLiteral =
-    ("@" _)? '"' DoubleStringCharacter* '"' /
+    (ObjectiveJLiteralMarker _)? '"' DoubleStringCharacter* '"' /
     "'" SingleStringCharacter* "'"
 
 DoubleStringCharacter =
