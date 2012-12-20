@@ -3,20 +3,31 @@ var Splice = require("./Traversal.js").Splice;
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
-function MethodContext(aContext)
+function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
-    this.selector = "";
-    this.isClassMethod = false;
-    this.scope = { };
-}
+    this.scope = shouldCreateScope ? aContext.scope : { };
 
+    if (aContext)
+    {
+        var transfer = ["className", "isClassMethod"],
+            index = transfer.length;
+
+        while (index--)
+            this[transfer[index]] = aContext[transfer[index]];
+    }
+}
 module.exports["ClassMethodDeclaration"] =
 module.exports["InstanceMethodDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        return new MethodContext(aContext);
+        var methodContext = new Context(aContext, false);
+
+        this.selector = "";
+        this.isClassMethod = false;
+
+        return methodContext;
     },
 
     exitedNode: function(aNode, aContext, splices)

@@ -1,10 +1,19 @@
 
 var Splice = require("./Traversal.js").Splice;
 
-function FunctionContext(aContext)
+function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
-    this.scope = { };
+    this.scope = shouldCreateScope ? aContext.scope : { };
+
+    if (aContext)
+    {
+        var transfer = ["className", "isClassMethod"],
+            index = transfer.length;
+
+        while (index--)
+            this[transfer[index]] = aContext[transfer[index]];
+    }
 }
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -45,7 +54,7 @@ module.exports["FunctionBody"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        return new FunctionContext(aContext);
+        return new Context(aContext, true);
     },
     
     exitedNode: function(aNode, aContext, splices)

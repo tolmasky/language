@@ -5,6 +5,15 @@ function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
     this.scope = shouldCreateScope ? aContext.scope : { };
+
+    if (aContext)
+    {
+        var transfer = ["className", "isClassMethod"],
+            index = transfer.length;
+
+        while (index--)
+            this[transfer[index]] = aContext[transfer[index]];
+    }
 }
 
 module.exports["MessageExpression"] =
@@ -21,10 +30,14 @@ module.exports["MessageExpression"] =
             if (!messageContext.isSuper)
                 return "objj_msgSend(";
 
-            if (true)
-                return "objj_msgSendSuper({ receiver:self, super_class:objj_getClass(\"" + "d" + "\").super_class }";
+            var result = "objj_msgSendSuper({ receiver:self, super_class:";
 
-            return "";
+            if (messageContext.isClassMethod)
+                result += "objj_getMetaClass(";
+            else
+                result += "objj_getClass(";
+
+            return result + "\"" + aContext.className + "\").super_class }";
         }));
 
         return messageContext;
