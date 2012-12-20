@@ -150,27 +150,24 @@ module.exports["MethodELLIPSIS"] =
     }
 }
 
-var GLOBAL_SCOPE    = 0,
-    LOCAL_SCOPE     = 1,
-    CLASS_SCOPE     = 3;
-
-function variableScope(aContext, anIdentifier)
+function contextOwningIdentifier(aContext, anIdentifier)
 {
-    var context = aContext;
+    var context = aContext,
+        scope = "scope";
 
-    while (context && hasOwnProperty.call(context, "scope"))
+    while (context)
     {
-        if (context.isClassContext &&
-            hasOwnProperty.call(context.isMeta ? context.metaScope : context.scope, anIdentifier))
-            return CLASS_SCOPE;
+        if (context.isMeta)
+            scope = "metaScope";
 
-        if (hasOwnProperty.call(context.scope, anIdentifier))
-            return LOCAL_SCOPE;
+        if (hasOwnProperty.call(context, scope) &&
+            hasOwnProperty.call(context[scope], anIdentifier))
+            return context;
 
         context = context.parentContext;
     }
 
-    return GLOBAL_SCOPE;
+    return null;
 }
 
 // Add "self." if necessary.
@@ -180,20 +177,22 @@ module.exports["IdentifierExpression"] =
     {
         splices.push(new Splice(aNode.range.location, 0, function()
         {
-            var scope = variableScope(aContext, aNode.innerText());
+            var context = contextOwningIdentifier(aContext, aNode.innerText());
 
-            if (scope === CLASS_SCOPE)
-                return "self.";
-/*
-            if (scope === GLOBAL_SCOPE)
+            if (!context)
             {
+                // global scope
+/*
                     var report = aNode.report(),
                         message = report.visualization + "\n";
 
                     message += "WARNING line " + report.lineNumber + ": " + aNode.innerText() + " is global.";
 
                     return message;
-            }*/
+*/
+            }
+            else if (context.isClassContext)
+                return "self.";
 
             return "";
         }));
