@@ -1,84 +1,131 @@
 
 var Splice = require("./Traversal.js").Splice;
 
-function MessageContext(aContext)
+function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
-    this.isSuper = false;
-    this.selector = "";
+    this.scope = shouldCreateScope ? aContext.scope : { };
 }
 
-module.exports["MessageExpression"] = 
+module.exports["MessageExpression"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        var messageContext = new MessageContext(aContext);
+        var messageContext = new Context(aContext, false);
+
+        messageContext.isSuper = false;
+        messageContext.selector = "";
 
         splices.push(new Splice(aNode.range.location, 1, function()
         {
             if (!messageContext.isSuper)
                 return "objj_msgSend(";
-            
+
             if (true)
                 return "objj_msgSendSuper({ receiver:self, super_class:objj_getClass(\"" + "d" + "\").super_class }";
 
             return "";
         }));
-    
+
         return messageContext;
     },
-    
+
     exitedNode : function(aNode, aContext, splices)
     {
         splices.push(new Splice(aNode.range.location + aNode.range.length - 1, 1, ")"));
-    
+
         return aContext.parentContext;
     }
 }
 
-module.exports["SelectorCall"] = 
+module.exports["SelectorCall"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, 0, function() 
-        { 
-            if (aContext.selector)
+        splices.push(new Splice(aNode.range.location, 0, function()
+        {
+            if (aContext.selector.length)
                 return ", \"" + aContext.selector + "\"";
-    
+
             return "";
         }));
     }
 }
 
-module.exports["SelectorPiece"] = 
+module.exports["SelectorLabelCall"] =
 {
-    enteredNode : function(aNode, aContext, splices)
+    exitedNode : function(aNode, aContext, splices)
     {
-        aContext.selector += aNode.innerText();
-    
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ", "));
+        splices.push(new Splice(aNode.range.location + aNode.range.length, 0, ", "));
     }
 }
 
-module.exports["UnarySelectorCall"] = 
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push(new Splice(aNode.range.location, 0, ", \""));
-    },
-
-    exitedNode: function(aNode, aContext, splices)
-    {
-        splices.push(new Splice(aNode.range.location + aNode.range.length, 0, "\""));
-    }
-}
-
-module.exports["SUPER"] = 
+module.exports["SUPER"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.isSuper = true;
         splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+    }
+}
+
+// Selectors
+
+// Always remove whitespace in selectors.
+module.exports["SelectorWhitespace"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+    }
+}
+
+// If we care about the selector, accumulate the colon and delete it.
+module.exports["SelectorColon"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        if (hasOwnProperty.call(aContext, "selector"))
+        {
+            aContext.selector += ":";
+            splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+        }
+    }
+}
+
+// If we care about the selector, accumulate the label and delete it.
+module.exports["SelectorLabel"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        if (hasOwnProperty.call(aContext, "selector"))
+        {
+            aContext.selector += aNode.innerText();
+            splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+        }
+    }
+}
+
+// Selector Literals
+// Simply remove surrounding @selector_( and add quotes.
+
+module.exports["SelectorLiteralPrefix"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push(new Splice(aNode.range.location, aNode.range.length, "sel_getUid(\""));
+
+        return new Context(aContext, false);
+    }
+}
+
+module.exports["SelectorLiteralPostfix"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push(new Splice(aNode.range.location, 0, "\""));
+
+        return aContext.parentContext;
     }
 }
 

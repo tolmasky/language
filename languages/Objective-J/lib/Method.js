@@ -1,16 +1,18 @@
 
 var Splice = require("./Traversal.js").Splice;
 
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+
 function MethodContext(aContext)
 {
     this.parentContext = aContext;
-    this.name = "";
+    this.selector = "";
     this.isClassMethod = false;
     this.scope = { };
 }
 
-module.exports["ClassMethodDeclaration"] = 
-module.exports["InstanceMethodDeclaration"] = 
+module.exports["ClassMethodDeclaration"] =
+module.exports["InstanceMethodDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -41,7 +43,7 @@ module.exports["InstanceMethodSignifier"] =
     }
 }
 
-module.exports["MethodSignature"] = 
+module.exports["MethodSignature"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -49,7 +51,7 @@ module.exports["MethodSignature"] =
         {
             var classVariable = aContext.isClassMethod ? aContext.parentContext.metaClassVariable : aContext.parentContext.classVariable;
 
-            return "class_addMethod(" + classVariable + ", \"" + aContext.name + "\", function(self, _cmd";
+            return "class_addMethod(" + classVariable + ", \"" + aContext.selector + "\", function(self, _cmd";
         }));
     },
 
@@ -59,26 +61,7 @@ module.exports["MethodSignature"] =
     }
 }
 
-module.exports["SelectorDeclaration"] = 
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        aContext.name += aNode.innerText();
-
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
-    }
-}
-module.exports["UnarySelectorDeclaration"] =  
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        aContext.name = aNode.innerText();
-
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
-    }
-}
-
-module.exports["MethodType"] =  
+module.exports["MethodType"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -86,7 +69,7 @@ module.exports["MethodType"] =
     }
 }
 
-module.exports["MethodParameter"] =  
+module.exports["MethodParameter"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -101,3 +84,13 @@ module.exports["MethodParameterIdentifier"] =
         aContext.scope[aNode.innerText()] = true;
     }
 }
+
+module.exports["MethodELLIPSIS"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+    }
+}
+
+
