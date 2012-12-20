@@ -201,15 +201,16 @@ StandardFilePath =
 // 12.[17] Class Declaration Statement
 
 ClassDeclarationStatement =
-    ClassHeader
-    _ ClassBody _
+    ClassHeader _
+    ClassIvars? _
+    ClassBody _
     "@end" EOS
 
 ClassHeader =
-    "@implementation" _ ClassName _ (SuperclassDeclaration / CategoryDeclaration)? _
-    ("{"
-        (_ CompoundIvarDeclaration)* _
-    "}")?
+    "@implementation" _ ClassName _ (SuperclassDeclaration / CategoryDeclaration)?
+
+ClassIvars =
+    "{" (_ CompoundIvarDeclaration)* _ "}"
 
 ClassName =
    Identifier

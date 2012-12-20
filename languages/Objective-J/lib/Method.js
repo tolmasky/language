@@ -24,8 +24,8 @@ module.exports["InstanceMethodDeclaration"] =
     {
         var methodContext = new Context(aContext, false);
 
-        this.selector = "";
-        this.isClassMethod = false;
+        methodContext.selector = "";
+        methodContext.isClassMethod = false;
 
         return methodContext;
     },

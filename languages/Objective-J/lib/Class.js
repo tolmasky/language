@@ -47,7 +47,7 @@ module.exports["ClassHeader"] =
             insertion += aContext.superClassName;
             insertion += ", \"" + aContext.className;
             insertion += "\"),\nmeta_class = the_class.isa;\n";
-            insertion += "class_addIvars(the_class, [%%IVARS%%];\nobjj_registerClassPair(the_class);";
+            insertion += "objj_registerClassPair(the_class);";
         }
 
         splices.push(new Splice(aNode.range.location, aNode.range.length, insertion));
@@ -78,13 +78,25 @@ module.exports["CategoryDeclaration"] =
     }
 }
 
+module.exports["IvarType"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+    }
+}
+
 module.exports["IvarIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.scope[aNode.innerText()] = true;
+        var ivarName = aNode.innerText();
+
+        aContext.scope[ivarName] = true;
 
         if (aContext.superClassName === "Nil")
-            aContext.metaScope[aNode.innerText()] = true;
+            aContext.metaScope[ivarName] = true;
+
+        splices.push(new Splice(aNode.range.location, aNode.range.length, "class_addIvar(the_class, \"" + ivarName + "\")"));
     }
 }
