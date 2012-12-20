@@ -1,0 +1,21 @@
+{
+  "name": "Objective-J",
+  "version": "0.0.0",
+  "description": "Objective-J language",
+  "main": "objjc.js",
+  "bin": {
+    "objjc": "./bin/objjc"
+  },
+  "scripts": {
+    "test": "objjc.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/tolmasky/language"
+  },
+  "keywords": [
+    "Objective-J"
+  ],
+  "author": "Francisco Tolmasky",
+  "license": "MIT"
+}

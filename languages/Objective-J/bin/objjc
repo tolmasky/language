@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+
+var path = require('path');
+var fs   = require('fs');
+var lib  = path.join(path.dirname(fs.realpathSync(__filename)), '../lib');
+
+var Compiler = require(lib + "/Compiler.js");
+
+if(process.argv.length < 3)
+{
+	console.error("Usage: node objjc.js filename");
+}
+else
+{
+	var fileName = process.argv[2];
+	var source = fs.readFileSync(fileName, "UTF-8");
+	 
+	var value = Compiler.compile(source);
+
+	console.log(value);
+}

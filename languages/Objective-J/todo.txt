@@ -1,0 +1,11 @@
+
+1. ivars (remember superclass)
+2. ivars (deal with class methods)
+3. print out ivars
+4. deal with types
+5. @class forward declarations
+6. trim whitespaces in selector names!
+7. function globalification
+---
+5. @{ key:value }
+6. @each

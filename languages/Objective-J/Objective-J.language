@@ -512,7 +512,10 @@ KeywordSelectorCall =
     KeywordCall (_ KeywordCall)*
 
 SelectorPiece =
-    Selector? _ ":"
+    Selector? _ SelectorColon
+
+SelectorColon =
+    ":"
 
 KeywordCall =
     SelectorPiece _ Expression
