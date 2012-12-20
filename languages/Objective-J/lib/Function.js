@@ -15,8 +15,11 @@ function isIvar(aContext, anIdentifier)
 
     while (context && hasOwnProperty.call(context, "scope"))
     {
+        if (context.isClassContext)
+            return hasOwnProperty.call(context.isMeta ? context.metaScope : context.scope, anIdentifier);
+
         if (hasOwnProperty.call(context.scope, anIdentifier))
-            return context.isClassContext;
+            return false;
 
         context = context.parentContext;
     }

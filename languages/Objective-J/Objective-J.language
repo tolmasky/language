@@ -288,17 +288,17 @@ MethodSignature =
     MethodType? _ MethodSelector
 
 MethodSelector =
-    KeywordSelector (_ "," _ "...")? / // Paramter type list?
-    UnarySelectorDeclaration
+    KeywordSelector _ MethodELLIPSIS? / // Paramter type list?
+    SelectorLabel
 
-UnarySelectorDeclaration =
-    Selector
+MethodELLIPSIS =
+    "," _ "..."
 
 KeywordSelector =
     KeywordDeclarator (_ KeywordDeclarator)*
 
 KeywordDeclarator =
-    SelectorDeclaration MethodParameter
+    SelectorLabelWithColon MethodParameter
 
 MethodParameter =
     (_ MethodType)? _ MethodParameterIdentifier
@@ -306,11 +306,17 @@ MethodParameter =
 MethodParameterIdentifier =
     Identifier
 
-SelectorDeclaration =
-    (Selector _)? ":"
+SelectorLabelWithColon =
+    SelectorLabel? SelectorWhitespace SelectorColon
 
-Selector =
+SelectorLabel =
     IdentifierName
+
+SelectorWhitespace =
+    _
+
+SelectorColon =
+    ":"
 
 MethodType =
     "(" _ (ACTION / IdentifierName) (_ (ACTION / IdentifierName))* _ ")"
@@ -506,19 +512,16 @@ SelectorCall =
     UnarySelectorCall
 
 UnarySelectorCall =
-    Selector
+    SelectorLabel
 
 KeywordSelectorCall =
     KeywordCall (_ KeywordCall)*
 
-SelectorPiece =
-    Selector? _ SelectorColon
-
-SelectorColon =
-    ":"
-
 KeywordCall =
-    SelectorPiece _ Expression
+    SelectorLabelCall _ Expression
+
+SelectorLabelCall =
+    SelectorLabelWithColon
 
 ArrayLiteral =
     (ObjectiveJLiteralMarker _)? "[" _ ElementList _ "]"
@@ -565,10 +568,17 @@ Literal =
     SelectorLiteral
 
 SelectorLiteral =
-    "@selector" _ "(" _ SelectorLiteralContents _ ")"
+     SelectorLiteralPrefix SelectorLiteralContents SelectorLiteralPostfix
+
+SelectorLiteralPrefix =
+    "@selector" _ "(" _
+
+SelectorLiteralPostfix =
+    _ ")"
 
 SelectorLiteralContents =
-    (Selector? _ ":" _)+ / Identifier
+    (SelectorLabelWithColon SelectorWhitespace)+ /
+    SelectorLabel
 
 NullLiteral =
     NULL

@@ -5,6 +5,7 @@ function ClassContext(aContext)
 {
     this.parentContext = null;
     this.scope = { };
+    this.metaScope = { };
     this.isClassContext = true;
     this.isCategory = false;
     this.className = "";
@@ -13,7 +14,7 @@ function ClassContext(aContext)
     this.metaClassVariable = "meta_class";
 }
 
-module.exports["ClassDeclarationStatement"] = 
+module.exports["ClassDeclarationStatement"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -48,12 +49,12 @@ module.exports["ClassHeader"] =
             insertion += "\"),\nmeta_class = the_class.isa;\n";
             insertion += "class_addIvars(the_class, [%%IVARS%%];\nobjj_registerClassPair(the_class);";
         }
-    
+
         splices.push(new Splice(aNode.range.location, aNode.range.length, insertion));
     }
 };
 
-module.exports["ClassName"] = 
+module.exports["ClassName"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -61,7 +62,7 @@ module.exports["ClassName"] =
     }
 }
 
-module.exports["SuperClassName"] = 
+module.exports["SuperClassName"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
@@ -77,10 +78,13 @@ module.exports["CategoryDeclaration"] =
     }
 }
 
-module.exports["IvarIdentifier"] = 
+module.exports["IvarIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.scope[aNode.innerText()] = true;
+
+        if (aContext.superClassName === "Nil")
+            aContext.metaScope[aNode.innerText()] = true;
     }
 }
