@@ -4,7 +4,7 @@ var Splice = require("./Traversal.js").Splice;
 function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
-    this.scope = shouldCreateScope ? aContext.scope : { };
+    this.scope = shouldCreateScope ? { } : aContext.scope;
 
     if (aContext)
     {

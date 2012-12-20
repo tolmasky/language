@@ -6,7 +6,7 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
-    this.scope = shouldCreateScope ? aContext.scope : { };
+    this.scope = shouldCreateScope ? { } : aContext.scope;
 
     if (aContext)
     {
@@ -68,7 +68,7 @@ module.exports["InstanceMethodDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        var methodContext = new Context(aContext, false);
+        var methodContext = new Context(aContext, true);
 
         methodContext.selector = "";
         methodContext.isClassMethod = false;
