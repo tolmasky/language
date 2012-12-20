@@ -280,7 +280,7 @@ function SyntaxNode(/*String*/ aName, /*String*/ aSource, /*Number*/ aLocation, 
         this.error = anErrorMessage;
 }
 
-SyntaxNode.prototype.message = function()
+SyntaxNode.prototype.report = function()
 {
     var source = this.source,
         lineNumber = 1,
@@ -300,12 +300,23 @@ SyntaxNode.prototype.message = function()
         if (source.charAt(index) === '\n')
             break;
 
-    var line = source.substring(start, index);
-        message = line + "\n";
+    var visualization = source.substring(start, index) + "\n";
 
-    message += (new Array(this.range.location - start + 1)).join(" ");
-    message += (new Array(Math.min(range.length, line.length) + 1)).join("^") + "\n";
-    message += "ERROR line " + lineNumber + ": " + this.error;
+    visualization += (new Array(this.range.location - start + 1)).join(" ");
+    visualization += (new Array(Math.min(range.length, visualization.length) + 1)).join("^");
+
+    return  {
+                visualization: visualization,
+                lineNumber: lineNumber
+            };
+}
+
+SyntaxNode.prototype.message = function()
+{
+    var report = this.report(),
+        message = report.visualization + "\n";
+
+    message += "ERROR line " + report.lineNumber + ": " + this.error;
 
     return message;
 }
@@ -359,7 +370,9 @@ SyntaxNode.prototype.traverse = function(walker)
             else if (walker.traversesTextNodes)
             {
                 walker.enteredNode(child);
-                walker.exitedNode(child);
+
+                if (walker.exitedNode)
+                    walker.exitedNode(child);
             }
         }
     }

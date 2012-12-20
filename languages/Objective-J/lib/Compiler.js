@@ -29,10 +29,7 @@ function Context(aContext)
 
 register(require("./Class.js"));
 register(require("./Method.js"));
-register(require("./Literal.js"));
 register(require("./Message.js"));
-register(require("./Import.js"));
-register(require("./Function.js"));
 
 module.exports.compile = function(source)
 {
