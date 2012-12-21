@@ -76,6 +76,14 @@ module.exports["CategoryDeclaration"] =
     }
 }
 
+module.exports["CompoundIvarDeclarationComma"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, aNode.range.length, ";"]);
+    }
+}
+
 module.exports["IvarType"] =
 {
     enteredNode: function(aNode, aContext, splices)

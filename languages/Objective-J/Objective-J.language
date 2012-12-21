@@ -202,15 +202,15 @@ StandardFilePath =
 
 ClassDeclarationStatement =
     ClassHeader _
-    ClassIvars? _
+    ("{" ClassMemberVariables "}")? _
     ClassBody _
     "@end" EOS
 
 ClassHeader =
     "@implementation" _ ClassName _ (SuperclassDeclaration / CategoryDeclaration)?
 
-ClassIvars =
-    "{" (_ CompoundIvarDeclaration)* _ "}"
+ClassMemberVariables =
+    (_ CompoundIvarDeclaration)* _
 
 ClassName =
    Identifier
@@ -225,7 +225,10 @@ CategoryDeclaration =
     "(" _ Identifier _ ")"
 
 CompoundIvarDeclaration =
-    IvarType _ IvarDeclaration (_ "," _ IvarDeclaration)* EOS
+    IvarType _ IvarDeclaration (_ CompoundIvarDeclarationComma _ IvarDeclaration)* EOS
+
+CompoundIvarDeclarationComma =
+    ","
 
 IvarType =
     IvarTypeElement (_ IvarTypeElement)*
