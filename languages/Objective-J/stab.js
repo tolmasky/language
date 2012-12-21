@@ -23,14 +23,26 @@ var FAIL        = 0,
     SUCCESS     = 2,
     INCOMPLETE  = 3;
 
+var EOF             = { },
+    PLACEHOLDER     = { },
+    FAILURE_NODE    = { state:FAIL };
+/*
+function Context(aContext)
+{
+    if (aC
+}*/
+
 var context =
 {
     rules : {
-                0: { UID:0, type:CHOICE, children:[1, "a"] },
+                0: { UID:0, type:CHOICE, children:["a", 1] },
                 1: { UID:1, type:SEQUENCE, children:[0, "a"] }
             },
     incomplete: { },
-    cache: { }
+    cache: { },
+    recursive: { },
+    index: -1,
+    placeholderParents: { }
 };
 /*
 var context =
@@ -48,24 +60,32 @@ var context =
     cache: { }
 };*/
 
-var start = fall(null, 0, 0, context);
+var start = fall(null, 0, context);
 
 var source = "aaaa",
     index = 0,
     count = source.length;
+
 print_node(start);
 for (; index < count; ++index)
 {
     console.log("+++++DOING " + source[index]);
-    context = parse(context, index, source[index]);
+    context = parse(context, source[index]);
     //console.log(context);
     print_node(start);
 }
+
+console.log("+++++DOING EOF");
+context = parse(context, EOF);
+print_node(start);
 
 function print_node(node, indentation, prints)
 {
     indentation = indentation || "";
     prints = prints || { };
+
+    if (node === PLACEHOLDER)
+        return console.log(indentation + " PLACEHOLDER");
 
     if (prints[node.UID] === 2)
         return;
@@ -83,10 +103,10 @@ function print_node(node, indentation, prints)
         console.log(indentation + "DOT " + node.UID);
 
     else if (rule.type === CHOICE)
-        console.log(indentation + "CHOICE " + node.UID);
+        console.log(indentation + "CHOICE " + node.UID + " [" + node.state + "]");
 
     else if (rule.type === SEQUENCE)
-        console.log(indentation + "SEQUENCE " + node.UID);
+        console.log(indentation + "SEQUENCE " + node.UID + " [" + node.state + "]");
 
     else if (rule.type === NOT)
         console.log(indentation + "NOT " + node.UID);
@@ -100,10 +120,19 @@ function print_node(node, indentation, prints)
     prints[node.UID]--;
 }
 
-function fall(parent, ruleUID, index, context)
+function fall(parent, ruleUID, context)
 {
-    var UID = ruleUID + " " + index,
-        rule = context.rules[ruleUID] || ruleUID,
+    var UID = ruleUID + " " + context.index,
+        recursive = context.recursive;
+
+    if (recursive[UID])
+    {console.log("did it...");
+        context.placeholderParents[parent.UID] = parent;
+
+        return PLACEHOLDER;
+    }
+
+    var rule = context.rules[ruleUID] || ruleUID,
         cache = context.cache,
         node = cache[UID] || { UID:UID, state:INCOMPLETE, rule:rule, parents:{ }, children:[] };
 
@@ -132,12 +161,18 @@ function fall(parent, ruleUID, index, context)
         return node;
     }
 
+    // Before handling our children, make sure we register ourselves so we don't get handled again.
+    recursive[UID] = node;
+
     // We always want to fill in the first child.
-    node.children[0] = fall(node, node.rule.children[0], index, context);
+    node.children[0] = fall(node, node.rule.children[0], context);
 
     // But only the second if this is a CHOICE or and AND.
     if (rule.type === CHOICE || rule.type === AND)
-        node.children[1] = fall(node, node.rule.children[1], index, context);
+        node.children[1] = fall(node, node.rule.children[1], context);
+
+    // Now unregister ourselves.
+    delete recursive[UID];
 
     return node;
 }
@@ -221,6 +256,9 @@ function climb(node, context)
 
     else if (rule.type === SEQUENCE)
     {
+        if (children[0].state === INCOMPLETE)
+            return;
+
         // If we have two children, there is no more advancing left to do.
         // We simply have to decide if we succeeded or failed.
         if (children.length === 2)
@@ -239,7 +277,7 @@ function climb(node, context)
         }
 
         // If it succeeded, then fall down again...
-        children[1] = fall(node, node.rule.children[1], index, context);           
+        children[1] = fall(node, node.rule.children[1], context);           
     }
 
     else if (rule.type === NOT)
@@ -255,10 +293,30 @@ function climb(node, context)
     }
 }
 
-function parse(context, index, character)
+function parse(context, character)
 {
     var incomplete = context.incomplete;
-    var newContext = { rules:context.rules, incomplete:{ }, cache:{ } };
+    var newContext = { rules:context.rules, incomplete:{ }, cache:{ }, index:context.index + 1, recursive:{ }, placeholderParents:{ } };
+    var placeholderParents = context.placeholderParents;
+    var UID;
+
+    for (UID in placeholderParents)
+        if (hasOwnProperty.call(placeholderParents, UID))
+        {
+            var parent = placeholderParents[UID],
+                children = parent.children,
+                index = 0,
+                count = children.length;
+
+            for (; index < count; ++index)
+                if (children[index] === PLACEHOLDER)
+                    if (character === EOF)
+                        children[index] = FAILURE_NODE;
+                    else
+                        children[index] = fall(parent, parent.rule.children[index], newContext);
+
+            climb(parent, newContext);
+        }
 
     for (UID in incomplete)
         if (hasOwnProperty.call(incomplete, UID))
