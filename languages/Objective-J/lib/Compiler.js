@@ -57,35 +57,27 @@ module.exports.compile = function(source)
         }
 	});
 
-    var index = splices.length,
+    // "Hand splicing" is much faster than calling splice each time...
+    var index = 0;
+        count = splices.length,
         characters = source.split("");
 
-    while (index--)
-    {
-        var splice = splices[index];
-
-        characters.splice.apply(characters, splice);
-    }
-
-	return characters.join("");
-}
-
-/*
-    var index = splices.length,
-        buffer = [],
-        remaining = source;
-
-    while (index--)
+    for (; index < count; ++index)
     {
         var splice = splices[index],
-            rhs = remaining.substr(splice.location + splice.length);
+            start = splice[0],
+            stop = start + splice[1];
 
-        remaining = remaining.substr(0, splice.location);
+        for (; start < stop; ++start)
+            characters[start] = "";
 
-        buffer.unshift(splice.insertion, rhs);
+        if (stop - 1 < 0)
+            characters[0] = splice[2] + characters[0];
+        else
+            characters[stop - 1] += splice[2];
     }
 
-    buffer.unshift(remaining);
+    var result = characters.join("");
 
-	return buffer.join("");
-*/
+    return result;
+}

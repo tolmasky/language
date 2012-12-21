@@ -48,7 +48,7 @@ module.exports["StandardFilePath"] =
 
     exitedNode : function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location + aNode.range.length - 1, 1, "\", NO)"]);
+        splices.push([aNode.range.location + aNode.range.length - 1, 1, "\", NO);"]);
     }
 }
 
@@ -57,7 +57,7 @@ module.exports["LocalFilePath"] =
 {
     exitedNode : function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location + aNode.range.length, 0, ", YES)"]);
+        splices.push([aNode.range.location + aNode.range.length, 0, ", YES);"]);
     }
 }
 
