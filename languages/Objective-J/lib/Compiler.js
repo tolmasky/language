@@ -64,7 +64,7 @@ module.exports.compile = function(source)
     {
         var splice = splices[index];
 
-        characters.splice(splice.location, splice.length, splice.insertion);
+        characters.splice.apply(characters, splice);
     }
 
 	return characters.join("");

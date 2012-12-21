@@ -1,6 +1,4 @@
 
-var Splice = require("./Traversal.js").Splice;
-
 function ClassContext(aContext)
 {
     this.parentContext = null;
@@ -50,7 +48,7 @@ module.exports["ClassHeader"] =
             insertion += "objj_registerClassPair(the_class);";
         }
 
-        splices.push(new Splice(aNode.range.location, aNode.range.length, insertion));
+        splices.push([aNode.range.location, aNode.range.length, insertion]);
     }
 };
 
@@ -82,7 +80,7 @@ module.exports["IvarType"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+        splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
 
@@ -97,6 +95,6 @@ module.exports["IvarIdentifier"] =
         if (aContext.superClassName === "Nil")
             aContext.metaScope[ivarName] = true;
 
-        splices.push(new Splice(aNode.range.location, aNode.range.length, "class_addIvar(the_class, \"" + ivarName + "\")"));
+        splices.push([aNode.range.location, aNode.range.length, "class_addIvar(the_class, \"" + ivarName + "\")"]);
     }
 }

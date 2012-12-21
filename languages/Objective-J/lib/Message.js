@@ -1,6 +1,4 @@
 
-var Splice = require("./Traversal.js").Splice;
-
 function Context(aContext, shouldCreateScope)
 {
     this.parentContext = aContext;
@@ -25,7 +23,7 @@ module.exports["MessageExpression"] =
         messageContext.isSuper = false;
         messageContext.selector = "";
 
-        splices.push(new Splice(aNode.range.location, 1, function()
+        splices.push([aNode.range.location, 1, { toString:function()
         {
             if (!messageContext.isSuper)
                 return "objj_msgSend(";
@@ -38,14 +36,14 @@ module.exports["MessageExpression"] =
                 result += "objj_getClass(";
 
             return result + "\"" + aContext.className + "\").super_class }";
-        }));
+        }}]);
 
         return messageContext;
     },
 
     exitedNode : function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location + aNode.range.length - 1, 1, ")"));
+        splices.push([aNode.range.location + aNode.range.length - 1, 1, ")"]);
 
         return aContext.parentContext;
     }
@@ -55,13 +53,13 @@ module.exports["SelectorCall"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, 0, function()
+        splices.push([aNode.range.location, 0, { toString:function()
         {
             if (aContext.selector.length)
                 return ", \"" + aContext.selector + "\"";
 
             return "";
-        }));
+        }}]);
     }
 }
 
@@ -69,7 +67,7 @@ module.exports["SelectorLabelCall"] =
 {
     exitedNode : function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location + aNode.range.length, 0, ", "));
+        splices.push([aNode.range.location + aNode.range.length, 0, ", "]);
     }
 }
 
@@ -78,7 +76,7 @@ module.exports["SUPER"] =
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.isSuper = true;
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+        splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
 
@@ -89,7 +87,7 @@ module.exports["SelectorWhitespace"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+        splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
 
@@ -101,7 +99,7 @@ module.exports["SelectorColon"] =
         if (hasOwnProperty.call(aContext, "selector"))
         {
             aContext.selector += ":";
-            splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+            splices.push([aNode.range.location, aNode.range.length, ""]);
         }
     }
 }
@@ -114,7 +112,7 @@ module.exports["SelectorLabel"] =
         if (hasOwnProperty.call(aContext, "selector"))
         {
             aContext.selector += aNode.innerText();
-            splices.push(new Splice(aNode.range.location, aNode.range.length, ""));
+            splices.push([aNode.range.location, aNode.range.length, ""]);
         }
     }
 }
@@ -126,7 +124,7 @@ module.exports["SelectorLiteralPrefix"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, aNode.range.length, "sel_getUid(\""));
+        splices.push([aNode.range.location, aNode.range.length, "sel_getUid(\""]);
 
         return new Context(aContext, false);
     }
@@ -136,7 +134,7 @@ module.exports["SelectorLiteralPostfix"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        splices.push(new Splice(aNode.range.location, 0, "\""));
+        splices.push([aNode.range.location, 0, "\""]);
 
         return aContext.parentContext;
     }
