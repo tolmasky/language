@@ -17,7 +17,13 @@ SourceElement =
     FunctionDeclaration
 
 FunctionDeclaration =
-    FUNCTION _ Identifier _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
+    FunctionDeclarationKeyword _ FunctionDeclarationName _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
+
+FunctionDeclarationKeyword =
+    FUNCTION
+
+FunctionDeclarationName =
+    Identifier
 
 FunctionExpression =
     FUNCTION _ Identifier? _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
@@ -49,8 +55,6 @@ Statement =
     ThrowStatement /
     TryStatement /
     DebuggerStatement /
-    FunctionDeclaration /
-    FunctionExpression /
     ImportStatement /
     ClassDeclarationStatement /
     ClassForwardDeclarationStatement /

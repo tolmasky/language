@@ -1,4 +1,7 @@
 
+// 1. @class
+// Class Forward Declarations exist only to support Objective-C code. Simply remove them.
+
 module.exports["ClassForwardDeclarationStatement"] =
 {
     enteredNode: function(aNode, aContext, splices)
@@ -7,12 +10,42 @@ module.exports["ClassForwardDeclarationStatement"] =
     }
 }
 
+// 2. # C Preprocessor Directives
+// We simply ignore these (for things like #pragma mark). It may be wise to warn about
+// them though, since it can point to forgetting to use the C preprocessor.
+
 module.exports["CPreprocessorStatement"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         // Warn/Error.
         splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+
+// 3. Function Globalification
+// Since we wrap Objective-J code in an anonymous function, function declarations are
+// local to that function. When we first wrote the language, we found this "unacceptable"
+// and hacked this by turning it into a "global" set. We may want to deprecate this behavior.
+
+module.exports["FunctionDeclarationKeyword"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        // We may want to either deprecate or warn about this legacy behavior.
+        if (!aContext.parentContext)
+            splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["FunctionDeclarationName"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        // We may want to either deprecate or warn about this legacy behavior.
+        if (!aContext.parentContext)
+            splices.push([aNode.range.location + aNode.range.length, 0, " = function"]);
     }
 }
 
