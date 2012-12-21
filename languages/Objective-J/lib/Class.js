@@ -1,4 +1,21 @@
 
+module.exports["ClassForwardDeclarationStatement"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["CPreprocessorStatement"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        // Warn/Error.
+        splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
 function ClassContext(aContext)
 {
     this.parentContext = null;
@@ -37,14 +54,14 @@ module.exports["ClassHeader"] =
             insertion += aContext.className;
             insertion += ");\n\if (!the_class) throw new SyntaxError(\"*** Could not find definition for class \\\"";
             insertion += aContext.className;
-            insertion += "\\\"\");\nvar meta_class = the_class.isa;";
+            insertion += "\\\"\"); var meta_class = the_class.isa;";
         }
         else
         {
             insertion += "var the_class = objj_allocateClassPair(";
             insertion += aContext.superClassName;
             insertion += ", \"" + aContext.className;
-            insertion += "\"),\nmeta_class = the_class.isa;\n";
+            insertion += "\"), meta_class = the_class.isa; ";
             insertion += "objj_registerClassPair(the_class);";
         }
 

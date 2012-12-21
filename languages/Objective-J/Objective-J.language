@@ -52,7 +52,9 @@ Statement =
     FunctionDeclaration /
     FunctionExpression /
     ImportStatement /
-    ClassDeclarationStatement
+    ClassDeclarationStatement /
+    ClassForwardDeclarationStatement /
+    CPreprocessorStatement
 
 // 12.1 Block
 
@@ -197,6 +199,14 @@ LocalFilePath =
 
 StandardFilePath =
     "<" _ ("\\>" / (!">" .))* _ ">"
+
+CPreprocessorStatement =
+    "#" (!LineTerminator .)* // Not correct since you can multi-line with \, but fine for now.
+
+// ClassForwardDeclarationStatement
+
+ClassForwardDeclarationStatement =
+    "@class" _ Identifier (_ "," _ Identifier)* EOS
 
 // 12.[17] Class Declaration Statement
 
