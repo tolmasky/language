@@ -45,7 +45,7 @@ module.exports["FunctionDeclarationName"] =
     {
         // We may want to either deprecate or warn about this legacy behavior.
         if (!aContext.parentContext)
-            splices.push([aNode.range.location + aNode.range.length, 0, " = function"]);
+            splices.push([aNode.range.location + aNode.range.length, 0, " = function " + aNode.innerText()]);
     }
 }
 

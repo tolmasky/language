@@ -1,8 +1,8 @@
 
-1. ivars (remember superclass)
-3. deal with types
-4. @class forward declarations
-5. function globalification
+1. Clean Up
+    1.a. Deal with types
+    1.b. @accessors
+2. Superclass handler.
 ---
 5. @{ key:value }
 6. @each
