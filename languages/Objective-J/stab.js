@@ -1,9 +1,6 @@
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
-// start = (("a" "a") "a") "b") /
-//         (("a" "a") "a") !"d" "c")
-
 // A?
 //  R = A / ""
 // A*
@@ -21,12 +18,10 @@ var CHARACTER   = 0,
     DOT         = -1;
 
 var FAIL        = 0,
-    SUCCESS     = 2,
-    INCOMPLETE  = 3;
+    SUCCESS     = 1,
+    INCOMPLETE  = 2;
 
-var EOF             = { },
-    PLACEHOLDER     = { },
-    FAILURE_NODE    = { state:FAIL };
+var EOF         = { };
 
 function Context(aContext, rules)
 {
@@ -35,7 +30,6 @@ function Context(aContext, rules)
     this.cache = { };
     this.recursive = { };
     this.index = -1;
-    this.placeholderParents = { };
 
     if (aContext)
     {
@@ -44,140 +38,54 @@ function Context(aContext, rules)
     }
 }
 
-/*
-// r = (bcc / b) cd
-var rules = {
-                0: { UID:0, type:SEQUENCE, children:[2, 1] },
-                1: { UID:1, type:SEQUENCE, children:["c", "d"] },
-                2: { UID:2, type:CHOICE, children:[3, "b"] },
-                3: { UID:3, type:SEQUENCE, children:["b", 4] },
-                4: { UID:4, type:SEQUENCE, children:["c", "c"] }
-            };
-var source = "bcd";
-
-// r = (bc / b) d
-var rules = {
-                0: { UID:0, type:SEQUENCE, children:[1 ,"d"] },
-                1: { UID:1, type:CHOICE, children:[2, "b"] },
-                2: { UID:2, type:SEQUENCE, children:["b", "c"] }
-            };
-var source = "bcd";
-*/
-// A = A a / a
-var rules = {
-                0: { UID:0, type:NAME, children:[1], name:"start" },
-                1: { UID:1, type:CHOICE, children:[2, "a"] },
-                2: { UID:2, type:SEQUENCE, children:[1, "a"] }
-            };
-var source = "aaaa";
-
-/*
-var rules = {
-                0: { UID:0, type:CHOICE, children:[1, 2] },
-                1: { UID:1, type:SEQUENCE, children:[3, "b"] },
-                2: { UID:2, type:SEQUENCE, children:[3, 5] },
-                3: { UID:3, type:SEQUENCE, children:[4, "a"] },
-                4: { UID:4, type:SEQUENCE, children:["a", "a"] },
-                5: { UID:5, type:AND, children:[6, -1] },
-                6: { UID:6, type:NOT, children:["d"] }
-            };
-var source = "aaac";
-*/
-
-var context = new Context(null, rules);
-var start = fall(null, 0, context);
-
-var index = 0,
-    count = source.length;
-
-print_node(start);
-for (; index < count; ++index)
+function SyntaxNode(context, parent, ruleUID)
 {
-    console.log("+++++DOING " + source[index]);
-    context = parse(context, source[index]);
-    //console.log(context);
-    print_node(start);
-}
+    var UID = ruleUID + " " + context.index;
+    var node = context.cache[UID] || this;
 
-console.log("+++++DOING EOF");
-context = parse(context, EOF);
-print_node(start);
-
-function print_node(node, indentation, prints)
-{
-    indentation = indentation || "";
-    prints = prints || { };
-
-    if (node === PLACEHOLDER)
-        return console.log(indentation + " PLACEHOLDER");
-
-    if (prints[node.UID] === 2)
-        return;
-    else if (prints[node.UID] === 1)
-        prints[node.UID] += 1;
-    else
-        prints[node.UID] = 1;
-
-    var rule = node.rule;
-
-    if (typeof rule === "string")
-        console.log(indentation + rule + " [" + node.state + "]");
-
-    else if (rule === -1)
-        console.log(indentation + "DOT " + node.UID);
-
-    else if (rule.type === CHOICE)
-        console.log(indentation + "CHOICE " + node.UID + " [" + node.state + "]");
-
-    else if (rule.type === SEQUENCE)
-        console.log(indentation + "SEQUENCE " + node.UID + " [" + node.state + "]");
-
-    else if (rule.type === NOT)
-        console.log(indentation + "NOT " + node.UID);
-
-    else if (rule.type === AND)
-        console.log(indentation + "AND " + node.UID);
-
-    else if (rule.type === NAME)
-        console.log(indentation + "NAME " + node.UID + " " + node.name);
-
-    for (var index = 0, count = node.children.length; index < count; ++index)
-        print_node(node.children[index], indentation + "   ", prints);
-
-    prints[node.UID]--;
-}
-
-function fall(parent, ruleUID, context)
-{
-    var UID = ruleUID + " " + context.index,
-        recursive = context.recursive;
-
-    if (recursive[UID])
+    if (node === this)
     {
-        context.placeholderParents[parent.UID] = parent;
-
-        return PLACEHOLDER;
+        node.UID = UID;
+        node.state = INCOMPLETE;
+        node.rule = context.rules[ruleUID] || ruleUID;
+        node.children = [];
+        node.parents = { };
     }
-
-    var rule = context.rules[ruleUID] || ruleUID,
-        cache = context.cache,
-        node = cache[UID] || { UID:UID, state:INCOMPLETE, rule:rule, parents:{ }, children:[] };
 
     // Only add this parent if we haven't already accounted for it.
     // This accounts for the user doing something silly like A / A
     if (parent && !hasOwnProperty.call(node.parents, parent.UID))
         node.parents[parent.UID] = parent;
 
-    // If it's cached, we've already worked this one out.
-    if (cache[UID])
-        return node;
+    if (node === this)
+        descend(context, node);
 
-    // Add this to the cache.
-    cache[UID] = node;
+    return node;
+}
+
+SyntaxNode.prototype.toString = function(indentation)
+{
+    indentation = indentation || "";
+
+    var rule = this.rule;
+    var meta = " (" + this.UID + ")[" + this.state + "] ";
+    var type = ["", "CHOICE", "SEQUENCE", "NOT", "AND", "NAME"][rule.type] || (rule === -1 ? "DOT" : rule);
+    var string = indentation + type + meta + (this.name || "") + "\n";
+
+    for (var index = 0, count = this.children.length; index < count; ++index)
+        string += this.children[index].toString(indentation + "   ");
+
+    return string;
+}
+
+function descend(context, node)
+{
+    var UID = node.UID;
+    var rule = node.rule;
 
     // If this is a character, there is nothing we can do during the fall stage.
     // Simply store it in the incomplete hash and return.
-    if (typeof rule === "string" || rule === -1)
+    if (typeof rule === "string" || rule === DOT)
     {
         // The empty string always trivially succeeds, and consumes no input.
         if (rule === "")
@@ -185,33 +93,40 @@ function fall(parent, ruleUID, context)
         else
             context.incomplete[UID] = node;
 
-        return node;
+        return;
     }
 
     if (rule.type === NAME)
         node.name = rule.name;
 
+    var recursive = context.recursive;
+
     // Before handling our children, make sure we register ourselves so we don't get handled again.
-    recursive[UID] = node;
+    recursive[rule.UID] = true;
 
     if (rule.type === SEQUENCE)
-        node.children[0] = fall(node, rule.children[0], context);
+        node.children[0] = new SyntaxNode(context, node, rule.children[0]);
     else
-        node.children = rule.children.map(function (child) { return fall(node, child, context); });
+        node.children = rule.children.map(function (ruleUID) { return new SyntaxNode(context, node, ruleUID); });
 
     // Now unregister ourselves.
-    delete recursive[UID];
-
-    return node;
+    delete recursive[rule.UID];
 }
 
-function climbAllParents(node, context)
+function setState(aContext, aNode, aState)
 {
-    var parents = node.parents;
+    aNode.state = aState;
+
+    if (aState === FAIL)
+        aNode.children.length = 0;
+
+//    console.log(["FAILED", "SUCCEEDED", "INCOMPLETE"][aNode.state] + aNode.UID + " " + aNode.children.length);
+
+    var parents = aNode.parents;
 
     for (UID in parents)
         if (hasOwnProperty.call(parents, UID))
-            climb(parents[UID], context);
+            climb(parents[UID], aContext);
 }
 
 function climb(node, context)
@@ -224,47 +139,51 @@ function climb(node, context)
 
     if (rule.type === CHOICE)
     {
-        var lhs = children[0];
+        var index = 0,
+            count = children.length;
 
-        // No matter what, if the first one is incomplete, we can't make a decision.
-        if (lhs.state === INCOMPLETE)
-            return;
-
-        // If not, and this was our ONLY child, or it was successful,
-        // then our state is now it's state and we can keep climbing.
-        if (children.length === 1 || lhs.state === SUCCESS)
+        for (; index < count; ++index)
         {
-            children.length = 1;
-            node.state = lhs.state;
+            var child = children[index];
 
-            return climbAllParents(node, context);
+            // Can't know yet.
+            if (child.state === INCOMPLETE)
+                return;
+
+            if (child.state === SUCCESS)
+            {
+                children[0] = child;
+                children.length = 1;
+
+                return setState(context, node, SUCCESS);
+            }
+
+            // By this point, there can only be FAILUREs behind us...
+            if (index == count - 1) // && child.state === FAILURE
+                return setState(context, node, FAIL);
         }
 
-        // Now we know for sure that we have 2 children AND the first was a failure,
-        // so its all on rhs.
-        var rhs = children[1];
+        return;
+    }
 
-        // Same as before, keep waiting.
-        if (rhs.state === INCOMPLETE)
+    else if (rule.type === AND)
+    {/*
+        if (children.some(function (child) { return child.state === INCOMPLETE; }))
             return;
 
-        // From now on, we know we have a result, either success of fail.
-        node.state = rhs.state;
+        node.state =    children.every(function (child) { return child.state === SUCCESS; }) ?
+                        SUCCESS : FAIL;
 
-        // If we succeeded, do a little accounting to make rhs our only child.
-        if (rhs.state === SUCCESS)
+        if (node.state === SUCCESS)
         {
-            children[0] = rhs;
+            children[0] = children[children.length - 1];
             children.length = 1;
         }
         else
             children.length = 0;
 
         return climbAllParents(node, context);
-    }
-
-    else if (rule.type === AND)
-    {
+*/
         var lhs = children[0],
             rhs = children[1];
 
@@ -274,38 +193,32 @@ function climb(node, context)
 
         // If our first child (the "predicate") fails, then we fail.
         // Both must succeed to succeed as a whole.
-        node.state = (lhs.state === SUCCESS && rhs.state === SUCCESS) ? SUCCESS : FAIL;
+        var state = (lhs.state === SUCCESS && rhs.state === SUCCESS) ? SUCCESS : FAIL;
 
         children[0] = rhs;
         children.length = 1;
 
-        return climbAllParents(node, context);
+        return setState(context, node, state);
     }
 
     else if (rule.type === SEQUENCE)
     {
-        if (children[0].state === INCOMPLETE)
+        var count = children.length,
+            last = children[count - 1];
+
+        // Can't know yet.
+        if (last.state === INCOMPLETE)
             return;
 
-        // If we have two children, there is no more advancing left to do.
-        // We simply have to decide if we succeeded or failed.
-        if (children.length === 2)
-        {
-            node.state = children[1].state;
+        if (last.state === FAIL)
+            return setState(context, node, FAIL);
 
-            return climbAllParents(node, context);
-        }
+        if (count === rule.children.length)
+            return setState(context, node, SUCCESS);
 
-        // If not, then see whether the first one failed...
-        if (children[0].state === FAIL)
-        {
-            node.state = FAIL;
+        children[count] = new SyntaxNode(context, node, rule.children[count]);
 
-            return climbAllParents(node, context);
-        }
-
-        // If it succeeded, then fall down again...
-        children[1] = fall(node, node.rule.children[1], context);
+        return;
     }
 
     else if (rule.type === NOT)
@@ -315,9 +228,7 @@ function climb(node, context)
         if (child.state === INCOMPLETE)
             return;
 
-        node.state = (child.state === FAIL ? SUCCESS : FAIL);
-
-        return climbAllParents(node, context);
+        return setState(context, node, child.state === FAIL ? SUCCESS : FAIL);
     }
 
     else if (rule.type === NAME)
@@ -327,44 +238,23 @@ function climb(node, context)
         if (child.state === INCOMPLETE)
             return;
 
-        node.state = child.state;
-
-        return climbAllParents(node, context);
+        return setState(context, node, child.state);
     }
 }
 
 function parse(context, character)
 {
     var incomplete = context.incomplete;
-    var placeholderParents = context.placeholderParents;
     var newContext = new Context(context);
     var UID;
-
-    for (UID in placeholderParents)
-        if (hasOwnProperty.call(placeholderParents, UID))
-        {
-            var parent = placeholderParents[UID],
-                children = parent.children,
-                index = 0,
-                count = children.length;
-
-            for (; index < count; ++index)
-                if (children[index] === PLACEHOLDER)
-                    if (character === EOF)
-                        children[index] = FAILURE_NODE;
-                    else
-                        children[index] = fall(parent, parent.rule.children[index], newContext);
-
-            climb(parent, newContext);
-        }
 
     for (UID in incomplete)
         if (hasOwnProperty.call(incomplete, UID))
         {
             var node = incomplete[UID];
+            var state = (node.rule === DOT || character === node.rule) ? SUCCESS : FAIL;
 
-            node.state = node.rule === -1 || character === node.rule ? SUCCESS : FAIL;
-            climbAllParents(node, newContext);
+            setState(newContext, node, state);
         }
 
     return newContext;
@@ -386,125 +276,30 @@ function parse(context, character)
 // a (c / d) b
 // a ((c) b / (d) b)
 /*
-    if (rule.type === CHOICE)
-    {
-        var index = 0,
-            count = children.length;
-
-        for (; index < count; ++index)
-        {
-            var child = children[index];
-
-            // Can't know yet.
-            if (child.state === INCOMPLETE)
-                return;
-
-            if (child.state === SUCCESS)
-            {
-                node.state = SUCCESS;
-
-                children[0] = child;
-                children.length = 1;
-
-                return climbAllParents(node, context);
-            }
-
-            // By this point, there can only be FAILUREs behind us...
-            if (child.state === FAILURE && index === count - 1)
-            {
-                node.state = FAILURE;
-
-                children.length = 0;
-
-                return climbAllParents(node, context);
-            }
-        }
-
-        return;
-    }
-
-    if (rule.type === CHOICE)
-    {
-        var index = 0,
-            count = children.length;
-
-        for (; index < count; ++index)
-        {
-            var child = children[index];
-
-            // Can't know yet.
-            if (child.state === INCOMPLETE)
-                return;
-
-            if (child.state === SUCCESS)
-            {
-                node.state = SUCCESS;
-
-                children[0] = child;
-                children.length = 1;
-
-                return climbAllParents(node, context);
-            }
-
-            // By this point, there can only be FAILUREs behind us...
-            if (child.state === FAILURE && index === count - 1)
-            {
-                node.state = FAILURE;
-
-                children.length = 0;
-
-                return climbAllParents(node, context);
-            }
-        }
-
-        return;
-    }
-
-    if (rule.type === SEQUENCE)
-    {
-        var index = 0,
-            count = children.length;
-
-        for (; index < count; ++index)
-        {
-            var child = children[index];
-
-            // Can't know yet.
-            if (child.state === INCOMPLETE)
-                return;
-
-            if (child.state === FAILURE)
-            {
-                node.state = FAILURE;
-                children.length = 0;
-
-                return climbAllParents(node, context);
-            }
-        }
-
-        node.state = SUCCESS;
-        children[0] = children[children.length - 1];
-
-        return climbAllParents(node, context);
-    }
-
-            {
-                node.state = SUCCESS;
-                children[0] = child;
-                children.length = 1;
-
-                return climbAllParents(node, context);
-            }
-
-            // By this point, there can only be FAILUREs behind us...
-            if (child.state === FAILURE && index === count - 1)
-            {
-                node.state = FAILURE;
-                children.length = 0;
-
-                return climbAllParents(node, context);
-            }
-        }
-    }
-
+//left recursion through --> wehn done, re-adopt and move.
 */
+
+var test = require("./ptests.js")[3];
+var source = test.source;
+var rules = test.rules;
+
+var time = new Date();
+var context = new Context(null, rules);
+var start = new SyntaxNode(context, null, 0);
+
+console.log("PREPARSE [" + -1 + "] = \"\"\n");
+console.log(start.toString());
+
+var index = 0,
+    count = source.length;
+
+for (; index < count; ++index)
+{
+    console.log("\nPARSING [" + index + "] = \"" + source[index] + "\"\n");
+    context = parse(context, source[index]);
+    console.log(start.toString());
+}
+
+console.log("\nPARSING [" + (index + 1) + "] = EOF\n");
+context = parse(context, EOF);
+console.log(new Date() - time);
