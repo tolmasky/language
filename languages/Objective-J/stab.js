@@ -10,13 +10,14 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 //  U = A / ""
 //  R = U / R
 // A+
-//  
+//
 
 var CHARACTER   = 0,
     CHOICE      = 1,
     SEQUENCE    = 2,
     NOT         = 3,
     AND         = 4,
+    NAME        = 5,
     DOT         = -1;
 
 var FAIL        = 0,
@@ -26,28 +27,52 @@ var FAIL        = 0,
 var EOF             = { },
     PLACEHOLDER     = { },
     FAILURE_NODE    = { state:FAIL };
-/*
-function Context(aContext)
-{
-    if (aC
-}*/
 
-var context =
+function Context(aContext, rules)
 {
-    rules : {
-                0: { UID:0, type:CHOICE, children:["a", 1] },
-                1: { UID:1, type:SEQUENCE, children:[0, "a"] }
-            },
-    incomplete: { },
-    cache: { },
-    recursive: { },
-    index: -1,
-    placeholderParents: { }
-};
+    this.rules = rules;
+    this.incomplete = { };
+    this.cache = { };
+    this.recursive = { };
+    this.index = -1;
+    this.placeholderParents = { };
+
+    if (aContext)
+    {
+        this.rules = aContext.rules;
+        this.index = aContext.index + 1;
+    }
+}
+
 /*
-var context =
-{
-    rules : {
+// r = (bcc / b) cd
+var rules = {
+                0: { UID:0, type:SEQUENCE, children:[2, 1] },
+                1: { UID:1, type:SEQUENCE, children:["c", "d"] },
+                2: { UID:2, type:CHOICE, children:[3, "b"] },
+                3: { UID:3, type:SEQUENCE, children:["b", 4] },
+                4: { UID:4, type:SEQUENCE, children:["c", "c"] }
+            };
+var source = "bcd";
+
+// r = (bc / b) d
+var rules = {
+                0: { UID:0, type:SEQUENCE, children:[1 ,"d"] },
+                1: { UID:1, type:CHOICE, children:[2, "b"] },
+                2: { UID:2, type:SEQUENCE, children:["b", "c"] }
+            };
+var source = "bcd";
+*/
+// A = A a / a
+var rules = {
+                0: { UID:0, type:NAME, children:[1], name:"start" },
+                1: { UID:1, type:CHOICE, children:[2, "a"] },
+                2: { UID:2, type:SEQUENCE, children:[1, "a"] }
+            };
+var source = "aaaa";
+
+/*
+var rules = {
                 0: { UID:0, type:CHOICE, children:[1, 2] },
                 1: { UID:1, type:SEQUENCE, children:[3, "b"] },
                 2: { UID:2, type:SEQUENCE, children:[3, 5] },
@@ -55,15 +80,14 @@ var context =
                 4: { UID:4, type:SEQUENCE, children:["a", "a"] },
                 5: { UID:5, type:AND, children:[6, -1] },
                 6: { UID:6, type:NOT, children:["d"] }
-            },
-    incomplete: { },
-    cache: { }
-};*/
+            };
+var source = "aaac";
+*/
 
+var context = new Context(null, rules);
 var start = fall(null, 0, context);
 
-var source = "aaaa",
-    index = 0,
+var index = 0,
     count = source.length;
 
 print_node(start);
@@ -114,6 +138,9 @@ function print_node(node, indentation, prints)
     else if (rule.type === AND)
         console.log(indentation + "AND " + node.UID);
 
+    else if (rule.type === NAME)
+        console.log(indentation + "NAME " + node.UID + " " + node.name);
+
     for (var index = 0, count = node.children.length; index < count; ++index)
         print_node(node.children[index], indentation + "   ", prints);
 
@@ -126,7 +153,7 @@ function fall(parent, ruleUID, context)
         recursive = context.recursive;
 
     if (recursive[UID])
-    {console.log("did it...");
+    {
         context.placeholderParents[parent.UID] = parent;
 
         return PLACEHOLDER;
@@ -161,15 +188,16 @@ function fall(parent, ruleUID, context)
         return node;
     }
 
+    if (rule.type === NAME)
+        node.name = rule.name;
+
     // Before handling our children, make sure we register ourselves so we don't get handled again.
     recursive[UID] = node;
 
-    // We always want to fill in the first child.
-    node.children[0] = fall(node, node.rule.children[0], context);
-
-    // But only the second if this is a CHOICE or and AND.
-    if (rule.type === CHOICE || rule.type === AND)
-        node.children[1] = fall(node, node.rule.children[1], context);
+    if (rule.type === SEQUENCE)
+        node.children[0] = fall(node, rule.children[0], context);
+    else
+        node.children = rule.children.map(function (child) { return fall(node, child, context); });
 
     // Now unregister ourselves.
     delete recursive[UID];
@@ -277,7 +305,7 @@ function climb(node, context)
         }
 
         // If it succeeded, then fall down again...
-        children[1] = fall(node, node.rule.children[1], context);           
+        children[1] = fall(node, node.rule.children[1], context);
     }
 
     else if (rule.type === NOT)
@@ -291,13 +319,25 @@ function climb(node, context)
 
         return climbAllParents(node, context);
     }
+
+    else if (rule.type === NAME)
+    {
+        var child = children[0];
+
+        if (child.state === INCOMPLETE)
+            return;
+
+        node.state = child.state;
+
+        return climbAllParents(node, context);
+    }
 }
 
 function parse(context, character)
 {
     var incomplete = context.incomplete;
-    var newContext = { rules:context.rules, incomplete:{ }, cache:{ }, index:context.index + 1, recursive:{ }, placeholderParents:{ } };
     var placeholderParents = context.placeholderParents;
+    var newContext = new Context(context);
     var UID;
 
     for (UID in placeholderParents)
@@ -330,3 +370,141 @@ function parse(context, character)
     return newContext;
 }
 
+/*
+// ADOPTION
+// gotta get up and try and try and try
+//carry onnnn the sound may your touch the ground
+// r = (bc / b) d
+// r = (bc d / b d)
+// r = (;_set) - (choice(bc) d)
+//   =         - (choice(b) d)
+// algo:
+// (not? pred?)
+// climb to seq take remaining, append.
+// r = choice hold(bc) -> seq _next_
+//            hold(b) -> seq _next_
+// a (c / d) b
+// a ((c) b / (d) b)
+/*
+    if (rule.type === CHOICE)
+    {
+        var index = 0,
+            count = children.length;
+
+        for (; index < count; ++index)
+        {
+            var child = children[index];
+
+            // Can't know yet.
+            if (child.state === INCOMPLETE)
+                return;
+
+            if (child.state === SUCCESS)
+            {
+                node.state = SUCCESS;
+
+                children[0] = child;
+                children.length = 1;
+
+                return climbAllParents(node, context);
+            }
+
+            // By this point, there can only be FAILUREs behind us...
+            if (child.state === FAILURE && index === count - 1)
+            {
+                node.state = FAILURE;
+
+                children.length = 0;
+
+                return climbAllParents(node, context);
+            }
+        }
+
+        return;
+    }
+
+    if (rule.type === CHOICE)
+    {
+        var index = 0,
+            count = children.length;
+
+        for (; index < count; ++index)
+        {
+            var child = children[index];
+
+            // Can't know yet.
+            if (child.state === INCOMPLETE)
+                return;
+
+            if (child.state === SUCCESS)
+            {
+                node.state = SUCCESS;
+
+                children[0] = child;
+                children.length = 1;
+
+                return climbAllParents(node, context);
+            }
+
+            // By this point, there can only be FAILUREs behind us...
+            if (child.state === FAILURE && index === count - 1)
+            {
+                node.state = FAILURE;
+
+                children.length = 0;
+
+                return climbAllParents(node, context);
+            }
+        }
+
+        return;
+    }
+
+    if (rule.type === SEQUENCE)
+    {
+        var index = 0,
+            count = children.length;
+
+        for (; index < count; ++index)
+        {
+            var child = children[index];
+
+            // Can't know yet.
+            if (child.state === INCOMPLETE)
+                return;
+
+            if (child.state === FAILURE)
+            {
+                node.state = FAILURE;
+                children.length = 0;
+
+                return climbAllParents(node, context);
+            }
+        }
+
+        node.state = SUCCESS;
+        children[0] = children[children.length - 1];
+
+        return climbAllParents(node, context);
+    }
+
+            {
+                node.state = SUCCESS;
+                children[0] = child;
+                children.length = 1;
+
+                return climbAllParents(node, context);
+            }
+
+            // By this point, there can only be FAILUREs behind us...
+            if (child.state === FAILURE && index === count - 1)
+            {
+                node.state = FAILURE;
+                children.length = 0;
+
+                return climbAllParents(node, context);
+            }
+        }
+    }
+
+*/
