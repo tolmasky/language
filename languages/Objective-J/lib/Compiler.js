@@ -21,10 +21,8 @@ function register(external)
     }
 }
 
-register(require("./Class.js"));
-register(require("./Method.js"));
-register(require("./Message.js"));
-var Context = require("./Context.js");
+var stuff = require("./Class.js");
+var Context = stuff.Context;
 
 module.exports.compile = function(source)
 {
