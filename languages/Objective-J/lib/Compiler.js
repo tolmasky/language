@@ -92,28 +92,45 @@ Context.prototype.set = function(aProperty, aValue)
         this.parentContext.set(aProperty, aValue);
 }
 
-function DeleteNode(aNode, aContext, splices)
+// Replace, Delete, Prepend, Append
+
+function replace(aString)
 {
-    splices.push([aNode.range.location, aNode.range.length, ""]);
+    return function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, aNode.range.length, aString]);
+    }
+}
+
+var remove = replace("");
+
+function prepend(aString)
+{
+    return function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, 0, aString]);
+    }
+}
+
+function append(aString)
+{
+    return function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location + aNode.range.length, 0, aString]);
+    }
 }
 
 // 1. @class
 // Class Forward Declarations exist only to support Objective-C code. Simply remove them.
 
-HANDLERS["ClassForwardDeclarationStatement"] = { enteredNode: DeleteNode };
+HANDLERS["ClassForwardDeclarationStatement"] = { enteredNode: remove };
 
 // 2. # C Preprocessor Directives
 // We simply ignore these (for things like #pragma mark). It may be wise to warn about
 // them though, since it can point to forgetting to use the C preprocessor.
 
-HANDLERS["CPreprocessorStatement"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        // Warn/Error.
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
+// Warn/Error?
+HANDLERS["CPreprocessorStatement"] = { enteredNode: remove };
 
 
 // 3. Function Globalification
@@ -127,7 +144,7 @@ HANDLERS["FunctionDeclarationKeyword"] =
     {
         // We may want to either deprecate or warn about this legacy behavior.
         if (!aContext.parentContext)
-            splices.push([aNode.range.location, aNode.range.length, ""]);
+            remove(aNode, aContext, splices);
     }
 }
 
@@ -137,7 +154,7 @@ HANDLERS["FunctionDeclarationName"] =
     {
         // We may want to either deprecate or warn about this legacy behavior.
         if (!aContext.parentContext)
-            splices.push([aNode.range.location + aNode.range.length, 0, " = function " + aNode.innerText()]);
+            append(" = function " + aNode.innerText())(aNode, aContext, splices);
     }
 }
 
@@ -181,7 +198,7 @@ HANDLERS["ClassHeader"] =
             insertion += "objj_registerClassPair(the_class);";
         }
 
-        splices.push([aNode.range.location, aNode.range.length, insertion]);
+        replace(insertion)(aNode, aContext, splices);
     }
 };
 
@@ -209,15 +226,9 @@ HANDLERS["CategoryDeclaration"] =
     }
 }
 
-HANDLERS["CompoundIvarDeclarationComma"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ";"]);
-    }
-}
+HANDLERS["CompoundIvarDeclarationComma"] = { enteredNode: replace(";") };
 
-HANDLERS["IvarTypeDeclaration"] = { enteredNode: DeleteNode };
+HANDLERS["IvarTypeDeclaration"] = { enteredNode: remove };
 
 HANDLERS["Accessors"] =
 {
@@ -227,18 +238,15 @@ HANDLERS["Accessors"] =
         var setter = "set" + getter.charAt(0).toUpperCase() + getter.substr(1) + ":";
 
         aContext.set("accessors", { "getter": getter, "setter": setter });
-    },
-
-    exitedNode: DeleteNode
+        remove(aNode, aContext, splices);
+    }
 }
 
 HANDLERS["AccessorsReadonly"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        var accessors = aContext.get("accessors");
-
-        delete accessors.setter;
+        delete aContext.get("accessors").setter;
     }
 }
 
@@ -251,10 +259,7 @@ HANDLERS["AccessorsGetterSelector"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        var getter = aNode.innerText();
-        var accessors = aContext.get("accessors");
-
-        accessors.getter = getter;
+        aContext.get("accessors").getter = aNode.innerText();
     }
 }
 
@@ -262,10 +267,7 @@ HANDLERS["AccessorsSetterSelector"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        var setter = aNode.innerText();
-        var accessors = aContext.get("accessors");
-
-        accessors.setter = aNode.innerText();
+        aContext.get("accessors").setter = aNode.innerText();
     }
 }
 
@@ -317,16 +319,16 @@ HANDLERS["IvarDeclaration"] =
             insertion += " }";
         }
 
-        splices.push([aNode.range.location + aNode.range.length, 0, insertion + ")"]);
+        append(insertion + ")")(aNode, aContext, splices);
     }
 }
 
 HANDLERS["IvarTypeDeclaration"] =
 {
-    exitedNode: function(aNode, aContext, splices)
+    enteredNode: function(aNode, aContext, splices)
     {
         aContext.set("ivar-type", aNode.innerText());
-        splices.push([aNode.range.location, aNode.range.length, ""]);
+        remove(aNode, aContext, splices);
     }
 }
 
@@ -342,36 +344,21 @@ HANDLERS["IvarIdentifier"] =
         if (aContext.superClassName === "Nil")
             aContext.get("meta-scope")[ivarName] = true;
 
-        splices.push([aNode.range.location, 0, "\""]);
+        prepend("\"")(aNode, aContext, splices);
     },
 
-    exitedNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location + aNode.range.length, 0, "\""]);
-    }
+    exitedNode: append("\"")
 }
 
 // Objective-J Literals
 
 // Just remove the @. (This handles strings and arrays).
-HANDLERS["ObjectiveJLiteralMarker"] =
-{
-    enteredNode : function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, "@".length, ""]);
-    }
-}
+HANDLERS["ObjectiveJLiteralMarker"] = { enteredNode: remove };
 
 // Import Statements.
 
 // Replace @import with objj_import(
-HANDLERS["ImportStatement"] =
-{
-    enteredNode : function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, "@import".length, "objj_import("]);
-    }
-}
+HANDLERS["ImportDirective"] = { enteredNode: replace("objj_import(") };
 
 // Replace <> with "", NO);
 HANDLERS["StandardFilePath"] =
@@ -388,13 +375,7 @@ HANDLERS["StandardFilePath"] =
 }
 
 // Simply append , YES);
-HANDLERS["LocalFilePath"] =
-{
-    exitedNode : function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location + aNode.range.length, 0, ", YES);"]);
-    }
-}
+HANDLERS["LocalFilePath"] = { exitedNode: append(", YES);") }
 
 HANDLERS["ClassMethodDeclaration"] =
 HANDLERS["InstanceMethodDeclaration"] =
@@ -410,10 +391,7 @@ HANDLERS["InstanceMethodDeclaration"] =
         });
     },
 
-    exitedNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location + aNode.range.length, 0, ");"]);
-    }
+    exitedNode: append(");")
 }
 
 HANDLERS["ClassMethodSignifier"] =
@@ -422,10 +400,10 @@ HANDLERS["ClassMethodSignifier"] =
     {
         aContext.set("class-method", true);
     },
-    exitedNode: DeleteNode
+    exitedNode: remove
 }
 
-HANDLERS["InstanceMethodSignifier"] = { enteredNode: DeleteNode };
+HANDLERS["InstanceMethodSignifier"] = { enteredNode: remove };
 
 HANDLERS["MethodSignature"] =
 {
@@ -443,10 +421,7 @@ HANDLERS["MethodSignature"] =
         }}]);
     },
 
-    exitedNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location + aNode.range.length, 0, ")"]);
-    }
+    exitedNode: append(")")
 }
 
 HANDLERS["MethodParameterType"] =
@@ -456,7 +431,7 @@ HANDLERS["MethodParameterType"] =
         if (aNode.innerText().length === 0)
             aContext.get("types").push("\"id\"");
     },
-    exitedNode: DeleteNode
+    exitedNode: remove
 }
 
 HANDLERS["MethodReturnType"] =
@@ -466,7 +441,7 @@ HANDLERS["MethodReturnType"] =
         if (aNode.innerText().length === 0)
             aContext.get("types").unshift("\"id\"");
     },
-    exitedNode: DeleteNode
+    exitedNode: remove
 }
 
 HANDLERS["MethodParameterTypeIdentifier"] =
@@ -478,13 +453,7 @@ HANDLERS["MethodReturnTypeIdentifier"] =
     }
 }
 
-HANDLERS["MethodParameter"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, 0, ","]);
-    }
-}
+HANDLERS["MethodParameter"] = { enteredNode: prepend(",") }
 
 HANDLERS["MethodParameterIdentifier"] =
 {
@@ -494,13 +463,7 @@ HANDLERS["MethodParameterIdentifier"] =
     }
 }
 
-HANDLERS["KeywordFormalParameterList"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, 0, ","]);
-    }
-}
+HANDLERS["KeywordFormalParameterList"] = { enteredNode: prepend(",") };
 
 HANDLERS["FormalParameterListComma"] =
 {
@@ -511,7 +474,7 @@ HANDLERS["FormalParameterListComma"] =
     }
 }
 
-HANDLERS["FormalParameterListELLIPSIS"] = { enteredNode: DeleteNode };
+HANDLERS["FormalParameterListELLIPSIS"] = { enteredNode: remove };
 
 function findContextWithIdentifierInScope(aContext, anIdentifier)
 {
@@ -597,7 +560,7 @@ var RECEIVER_VARIABLE   = 0,
 
 HANDLERS["MessageExpression"] =
 {
-    enteredNode : function(aNode, aContext, splices)
+    enteredNode: function(aNode, aContext, splices)
     {
         var messageContext = new Context(aNode, aContext,
         {
@@ -626,7 +589,7 @@ HANDLERS["MessageExpression"] =
         return messageContext;
     },
 
-    exitedNode : function(aNode, aContext, splices)
+    exitedNode: function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location + aNode.range.length - 1, 1, ")"]);
     }
@@ -651,13 +614,7 @@ HANDLERS["SelectorCall"] =
     }
 }
 
-HANDLERS["SelectorLabelCall"] =
-{
-    exitedNode : function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location + aNode.range.length, 0, ", "]);
-    }
-}
+HANDLERS["SelectorLabelCall"] = { exitedNode: append(", ") }
 
 HANDLERS["SUPER"] =
 {
@@ -665,16 +622,13 @@ HANDLERS["SUPER"] =
     {
         aContext.set("receiver", aContext.get("class-method") ? RECEIVER_SUPER_META : RECEIVER_SUPER);
     },
-    exitedNode: DeleteNode
+    exitedNode: remove
 }
 
 // Selectors
 
 // Always remove whitespace in selectors.
-HANDLERS["SelectorWhitespace"] =
-{
-    enteredNode: DeleteNode
-}
+HANDLERS["SelectorWhitespace"] = { enteredNode: remove }
 
 // If we care about the selector, accumulate the colon and delete it.
 HANDLERS["SelectorColon"] =
@@ -684,7 +638,7 @@ HANDLERS["SelectorColon"] =
         if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + ":");
-            DeleteNode(aNode, aContext, splices);
+            remove(aNode, aContext, splices);
         }
     }
 }
@@ -697,7 +651,7 @@ HANDLERS["SelectorLabel"] =
         if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + aNode.innerText());
-            DeleteNode(aNode, aContext, splices);
+            remove(aNode, aContext, splices);
         }
     }
 }
@@ -713,18 +667,6 @@ HANDLERS["SelectorLiteral"] =
     }
 }
 
-HANDLERS["SelectorLiteralPrefix"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, "sel_getUid(\""]);
-    }
-}
+HANDLERS["SelectorLiteralPrefix"] = { enteredNode: replace("sel_getUid(\"") }
 
-HANDLERS["SelectorLiteralPostfix"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, 0, "\""]);
-    }
-}
+HANDLERS["SelectorLiteralPostfix"] = { enteredNode: prepend("\"") }

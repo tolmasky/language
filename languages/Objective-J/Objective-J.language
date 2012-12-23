@@ -202,7 +202,10 @@ DebuggerStatement =
 // 12.[16] Import Statement
 
 ImportStatement =
-    "@import" _ (LocalFilePath / StandardFilePath) EOS
+    ImportDirective _ (LocalFilePath / StandardFilePath) EOS
+
+ImportDirective =
+    "@import"
 
 LocalFilePath =
     StringLiteral
