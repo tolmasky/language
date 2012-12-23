@@ -254,10 +254,7 @@ IvarTypeDeclaration =
     IvarTypeElement (_ IvarTypeElement)*
 
 IvarTypeElement =
-    !((IvarTypeIdentifier / "@outlet") _ (Accessors / EOS / ",")) (IvarTypeIdentifier / "@outlet")
-
-IvarTypeIdentifier =
-    IdentifierName // for var
+    !((IdentifierName / "@outlet") _ (Accessors / EOS / ",")) (IdentifierName / "@outlet")
 
 IvarDeclaration =
     IvarIdentifier _ Accessors?

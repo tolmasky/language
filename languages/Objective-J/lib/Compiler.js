@@ -92,16 +92,15 @@ Context.prototype.set = function(aProperty, aValue)
         this.parentContext.set(aProperty, aValue);
 }
 
+function DeleteNode(aNode, aContext, splices)
+{
+    splices.push([aNode.range.location, aNode.range.length, ""]);
+}
+
 // 1. @class
 // Class Forward Declarations exist only to support Objective-C code. Simply remove them.
 
-HANDLERS["ClassForwardDeclarationStatement"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
+HANDLERS["ClassForwardDeclarationStatement"] = { enteredNode: DeleteNode };
 
 // 2. # C Preprocessor Directives
 // We simply ignore these (for things like #pragma mark). It may be wise to warn about
@@ -218,21 +217,7 @@ HANDLERS["CompoundIvarDeclarationComma"] =
     }
 }
 
-HANDLERS["IvarTypeDeclaration"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
-
-HANDLERS["IvarTypeIdentifier"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-//        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
+HANDLERS["IvarTypeDeclaration"] = { enteredNode: DeleteNode };
 
 HANDLERS["Accessors"] =
 {
@@ -244,10 +229,7 @@ HANDLERS["Accessors"] =
         aContext.set("accessors", { "getter": getter, "setter": setter });
     },
 
-    exitedNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    exitedNode: DeleteNode
 }
 
 HANDLERS["AccessorsReadonly"] =
@@ -439,16 +421,11 @@ HANDLERS["ClassMethodSignifier"] =
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.set("class-method", true);
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    },
+    exitedNode: DeleteNode
 }
-HANDLERS["InstanceMethodSignifier"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
+
+HANDLERS["InstanceMethodSignifier"] = { enteredNode: DeleteNode };
 
 HANDLERS["MethodSignature"] =
 {
@@ -478,9 +455,8 @@ HANDLERS["MethodParameterType"] =
     {
         if (aNode.innerText().length === 0)
             aContext.get("types").push("\"id\"");
-
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    },
+    exitedNode: DeleteNode
 }
 
 HANDLERS["MethodReturnType"] =
@@ -489,9 +465,8 @@ HANDLERS["MethodReturnType"] =
     {
         if (aNode.innerText().length === 0)
             aContext.get("types").unshift("\"id\"");
-
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    },
+    exitedNode: DeleteNode
 }
 
 HANDLERS["MethodParameterTypeIdentifier"] =
@@ -536,13 +511,7 @@ HANDLERS["FormalParameterListComma"] =
     }
 }
 
-HANDLERS["FormalParameterListELLIPSIS"] =
-{
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
-}
+HANDLERS["FormalParameterListELLIPSIS"] = { enteredNode: DeleteNode };
 
 function findContextWithIdentifierInScope(aContext, anIdentifier)
 {
@@ -695,8 +664,8 @@ HANDLERS["SUPER"] =
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.set("receiver", aContext.get("class-method") ? RECEIVER_SUPER_META : RECEIVER_SUPER);
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    },
+    exitedNode: DeleteNode
 }
 
 // Selectors
@@ -704,10 +673,7 @@ HANDLERS["SUPER"] =
 // Always remove whitespace in selectors.
 HANDLERS["SelectorWhitespace"] =
 {
-    enteredNode: function(aNode, aContext, splices)
-    {
-        splices.push([aNode.range.location, aNode.range.length, ""]);
-    }
+    enteredNode: DeleteNode
 }
 
 // If we care about the selector, accumulate the colon and delete it.
@@ -718,7 +684,7 @@ HANDLERS["SelectorColon"] =
         if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + ":");
-            splices.push([aNode.range.location, aNode.range.length, ""]);
+            DeleteNode(aNode, aContext, splices);
         }
     }
 }
@@ -731,7 +697,7 @@ HANDLERS["SelectorLabel"] =
         if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + aNode.innerText());
-            splices.push([aNode.range.location, aNode.range.length, ""]);
+            DeleteNode(aNode, aContext, splices);
         }
     }
 }
