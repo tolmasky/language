@@ -1,6 +1,5 @@
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
-var Context = require("./Context.js");
 
 function Context(aNode, aContext, data)
 {
