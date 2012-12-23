@@ -21,15 +21,10 @@ function register(external)
     }
 }
 
-function Context(aContext)
-{
-    this.parentContext = aContext;
-    this.scope = { };
-}
-
 register(require("./Class.js"));
 register(require("./Method.js"));
 register(require("./Message.js"));
+var Context = require("./Context.js");
 
 module.exports.compile = function(source)
 {
@@ -37,7 +32,7 @@ module.exports.compile = function(source)
         entries = handlers["enteredNode"],
         exits = handlers["exitedNode"],
         splices = [],
-        context = new Context(null);
+        context = new Context(null, null, { "global": true, "scope": { } });
 
     tree.traverse({
         traversesTextNodes : false,
@@ -54,6 +49,9 @@ module.exports.compile = function(source)
 
             if (handler)
                 context = handler(aNode, context, splices) || context;
+
+            if (context.node === aNode)
+                context = context.parentContext;
         }
 	});
 

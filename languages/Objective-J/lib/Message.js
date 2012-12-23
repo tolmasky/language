@@ -1,42 +1,39 @@
 
-function Context(aContext, shouldCreateScope)
-{
-    this.parentContext = aContext;
-    this.scope = shouldCreateScope ? { } : aContext.scope;
+var Context = require("./Context.js");
 
-    if (aContext)
-    {
-        var transfer = ["className", "isClassMethod"],
-            index = transfer.length;
-
-        while (index--)
-            this[transfer[index]] = aContext[transfer[index]];
-    }
-}
+var RECEIVER_VARIABLE   = 0,
+    RECEIVER_SUPER      = 1,
+    RECEIVER_SUPER_META = 2;
 
 module.exports["MessageExpression"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        var messageContext = new Context(aContext, false);
-
-        messageContext.isSuper = false;
-        messageContext.selector = "";
-
-        splices.push([aNode.range.location, 1, { toString:function()
+        var messageContext = new Context(aNode, aContext,
         {
-            if (!messageContext.isSuper)
-                return "objj_msgSend(";
+            "selector": "",
+            "receiver": RECEIVER_VARIABLE
+        });
 
-            var result = "objj_msgSendSuper({ receiver:self, super_class:";
+        splices.push([aNode.range.location, 1,
+        {
+            toString:function()
+            {
+                var receiver = messageContext.get("receiver");
 
-            if (messageContext.isClassMethod)
-                result += "objj_getMetaClass(";
-            else
-                result += "objj_getClass(";
+                if (receiver === RECEIVER_VARIABLE)
+                    return "objj_msgSend(";
 
-            return result + "\"" + aContext.className + "\").super_class }";
-        }}]);
+                var result = "objj_msgSendSuper({ receiver:self, super_class:";
+
+                if (receiver === RECEIVER_SUPER)
+                    result += "objj_getClass(";
+                else
+                    result += "objj_getMetaClass(";
+
+                return result + "\"" + aContext.get("class-name") + "\").super_class }";
+            }
+        }]);
 
         return messageContext;
     },
@@ -44,8 +41,6 @@ module.exports["MessageExpression"] =
     exitedNode : function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location + aNode.range.length - 1, 1, ")"]);
-
-        return aContext.parentContext;
     }
 }
 
@@ -53,13 +48,18 @@ module.exports["SelectorCall"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location, 0, { toString:function()
+        splices.push([aNode.range.location, 0,
         {
-            if (aContext.selector.length)
-                return ", \"" + aContext.selector + "\"";
+            toString:function()
+            {
+                var selector = aContext.get("selector");
 
-            return "";
-        }}]);
+                if (selector.length)
+                    return ", \"" + selector + "\"";
+
+                return "";
+            }
+        }]);
     }
 }
 
@@ -75,7 +75,7 @@ module.exports["SUPER"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.isSuper = true;
+        aContext.set("receiver", aContext.get("class-method") ? RECEIVER_SUPER_META : RECEIVER_SUPER);
         splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
@@ -96,9 +96,9 @@ module.exports["SelectorColon"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        if (hasOwnProperty.call(aContext, "selector"))
+        if (!aContext.has("selector-literal", false))
         {
-            aContext.selector += ":";
+            aContext.set("selector", aContext.get("selector") + ":");
             splices.push([aNode.range.location, aNode.range.length, ""]);
         }
     }
@@ -109,9 +109,9 @@ module.exports["SelectorLabel"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        if (hasOwnProperty.call(aContext, "selector"))
+        if (!aContext.has("selector-literal", false))
         {
-            aContext.selector += aNode.innerText();
+            aContext.set("selector", aContext.get("selector") + aNode.innerText());
             splices.push([aNode.range.location, aNode.range.length, ""]);
         }
     }
@@ -120,13 +120,19 @@ module.exports["SelectorLabel"] =
 // Selector Literals
 // Simply remove surrounding @selector_( and add quotes.
 
+module.exports["SelectorLiteral"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        return new Context(aNode, aContext, { "selector-literal":true });
+    }
+}
+
 module.exports["SelectorLiteralPrefix"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location, aNode.range.length, "sel_getUid(\""]);
-
-        return new Context(aContext, false);
     }
 }
 
@@ -135,8 +141,6 @@ module.exports["SelectorLiteralPostfix"] =
     enteredNode: function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location, 0, "\""]);
-
-        return aContext.parentContext;
     }
 }
 

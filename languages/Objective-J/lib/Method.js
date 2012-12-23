@@ -1,20 +1,6 @@
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
-
-function Context(aContext, shouldCreateScope)
-{
-    this.parentContext = aContext;
-    this.scope = shouldCreateScope ? { } : aContext.scope;
-
-    if (aContext)
-    {
-        var transfer = ["className", "isClassMethod"],
-            index = transfer.length;
-
-        while (index--)
-            this[transfer[index]] = aContext[transfer[index]];
-    }
-}
+var Context = require("./Context.js");
 
 // Objective-J Literals
 
@@ -66,19 +52,17 @@ module.exports["InstanceMethodDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        var methodContext = new Context(aContext, true);
-
-        methodContext.selector = "";
-        methodContext.isClassMethod = false;
-
-        return methodContext;
+        return new Context(aNode, aContext,
+        {
+            "scope": { },
+            "selector": "",
+            "class-method": false
+        });
     },
 
     exitedNode: function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location + aNode.range.length, 0, ");"]);
-
-        return aContext.parentContext;
     }
 }
 
@@ -86,7 +70,7 @@ module.exports["ClassMethodSignifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.isClassMethod = true;
+        aContext.set("class-method", true);
         splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
@@ -104,9 +88,11 @@ module.exports["MethodSignature"] =
     {
         splices.push([aNode.range.location, 0, { toString:function()
         {
-            var classVariable = aContext.isClassMethod ? aContext.parentContext.metaClassVariable : aContext.parentContext.classVariable;
+            var variable =  aContext.get("class-method") ?
+                            aContext.get("generated-meta-class-variable") :
+                            aContext.get("generated-class-variable");
 
-            return "class_addMethod(" + classVariable + ", \"" + aContext.selector + "\", function(self, _cmd";
+            return "class_addMethod(" + variable + ", \"" + aContext.get("selector") + "\", function(self, _cmd";
         }}]);
     },
 
@@ -136,7 +122,7 @@ module.exports["MethodParameterIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.scope[aNode.innerText()] = true;
+        aContext.get("scope")[aNode.innerText()] = true;
     }
 }
 
@@ -148,19 +134,22 @@ module.exports["MethodELLIPSIS"] =
     }
 }
 
-function contextOwningIdentifier(aContext, anIdentifier)
+function findContextWithIdentifierInScope(aContext, anIdentifier)
 {
     var context = aContext,
-        scope = "scope";
+        metaClassScope = context.get("class-method") || false;
 
     while (context)
     {
-        if (context.isMeta)
-            scope = "metaScope";
+        var scopeName = context.has("class-name") && metaClassScope ? "meta-scope" : "scope";
 
-        if (hasOwnProperty.call(context, scope) &&
-            hasOwnProperty.call(context[scope], anIdentifier))
-            return context;
+        if (context.has(scopeName, false))
+        {
+            var scope = context.get(scopeName, false);
+
+            if (hasOwnProperty.call(scope, anIdentifier))
+                return context;
+        }
 
         context = context.parentContext;
     }
@@ -175,21 +164,28 @@ module.exports["IdentifierExpression"] =
     {
         splices.push([aNode.range.location, 0, { toString:function()
         {
-            var context = contextOwningIdentifier(aContext, aNode.innerText());
+            var identifier = aNode.innerText();
 
-            if (!context)
+            // self is var-ed through the method itself parameters.
+            if (identifier === "self")
+                return "";
+
+            // Find which context's scope contains this identifier.
+            var context = findContextWithIdentifierInScope(aContext, aNode.innerText());
+
+            if (!context || context.has("global", false))
             {
+                return "";
                 // global scope
-/*
-                    var report = aNode.report(),
-                        message = report.visualization + "\n";
+                var report = aNode.report(),
+                    message = "Line: " + report.lineNumber + "\n" + report.visualization + "\n";
 
-                    message += "WARNING line " + report.lineNumber + ": " + aNode.innerText() + " is global.";
+                message += "Warning: " + aNode.innerText() + " is global.";
 
-                    return message;
-*/
+                console.log(message);
             }
-            else if (context.isClassContext)
+
+            else if (context.has("class-name", false))
                 return "self.";
 
             return "";
@@ -202,12 +198,7 @@ module.exports["FunctionBody"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        return new Context(aContext, true);
-    },
-
-    exitedNode: function(aNode, aContext, splices)
-    {
-        return aContext.parentContext;
+        return new Context(aNode, aContext, { "scope": { }  });
     }
 }
 
@@ -217,7 +208,6 @@ module.exports["VariableIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.scope[aNode.innerText()] = true;
+        aContext.get("scope")[aNode.innerText()] = true;
     }
 }
-

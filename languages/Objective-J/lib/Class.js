@@ -1,4 +1,6 @@
 
+var Context = require("./Context.js");
+
 // 1. @class
 // Class Forward Declarations exist only to support Objective-C code. Simply remove them.
 
@@ -49,29 +51,20 @@ module.exports["FunctionDeclarationName"] =
     }
 }
 
-function ClassContext(aContext)
-{
-    this.parentContext = null;
-    this.scope = { };
-    this.metaScope = { };
-    this.isClassContext = true;
-    this.isCategory = false;
-    this.className = "";
-    this.superClassName = "Nil";
-    this.classVariable = "the_class";
-    this.metaClassVariable = "meta_class";
-}
-
 module.exports["ClassDeclarationStatement"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        return new ClassContext(aContext);
-    },
-
-    exitedNode: function(aNode, aContext, splices)
-    {
-        return aContext.parentContext;
+        return new Context(aNode, aContext,
+        {
+            "scope": { },
+            "meta-scope": { },
+            "category-declaration": false,
+            "class-name": "",
+            "super-class-name": "Nil",
+            "generated-class-variable": "the_class",
+            "generated-meta-class-variable" : "meta_class"
+        });
     }
 };
 
@@ -81,19 +74,19 @@ module.exports["ClassHeader"] =
     {
         var insertion = "";
 
-        if (aContext.isCategory)
+        if (aContext.get("category-declaration"))
         {
             insertion += "var the_class = objj_getClass(\"";
-            insertion += aContext.className;
+            insertion += aContext.get("class-name");
             insertion += ");\n\if (!the_class) throw new SyntaxError(\"*** Could not find definition for class \\\"";
-            insertion += aContext.className;
+            insertion += aContext.get("class-name");
             insertion += "\\\"\"); var meta_class = the_class.isa;";
         }
         else
         {
             insertion += "var the_class = objj_allocateClassPair(";
-            insertion += aContext.superClassName;
-            insertion += ", \"" + aContext.className;
+            insertion += aContext.get("super-class-name");
+            insertion += ", \"" + aContext.get("class-name");
             insertion += "\"), meta_class = the_class.isa; ";
             insertion += "objj_registerClassPair(the_class);";
         }
@@ -114,7 +107,7 @@ module.exports["SuperClassName"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.superClassName = aNode.innerText() || "Nil";
+        aContext.set("super-class-name", aNode.innerText() || "Nil");
     }
 }
 
@@ -122,7 +115,7 @@ module.exports["CategoryDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.isCategory = true;
+        aContext.set("category-declaration", true);
     }
 }
 
@@ -134,11 +127,19 @@ module.exports["CompoundIvarDeclarationComma"] =
     }
 }
 
-module.exports["IvarType"] =
+module.exports["IvarTypeDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["IvarTypeIdentifier"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+//        splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
 
@@ -148,10 +149,10 @@ module.exports["IvarIdentifier"] =
     {
         var ivarName = aNode.innerText();
 
-        aContext.scope[ivarName] = true;
+        aContext.get("scope")[ivarName] = true;
 
         if (aContext.superClassName === "Nil")
-            aContext.metaScope[ivarName] = true;
+            aContext.get("meta-scope")[ivarName] = true;
 
         splices.push([aNode.range.location, aNode.range.length, "class_addIvar(the_class, \"" + ivarName + "\")"]);
     }

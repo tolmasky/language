@@ -239,16 +239,19 @@ CategoryDeclaration =
     "(" _ Identifier _ ")"
 
 CompoundIvarDeclaration =
-    IvarType _ IvarDeclaration (_ CompoundIvarDeclarationComma _ IvarDeclaration)* EOS
+    IvarTypeDeclaration _ IvarDeclaration (_ CompoundIvarDeclarationComma _ IvarDeclaration)* EOS
 
 CompoundIvarDeclarationComma =
     ","
 
-IvarType =
+IvarTypeDeclaration =
     IvarTypeElement (_ IvarTypeElement)*
 
 IvarTypeElement =
-    !((IdentifierName / "@outlet") _ (Accessors / EOS / ",")) (IdentifierName / "@outlet")
+    !((IvarTypeIdentifier / "@outlet") _ (Accessors / EOS / ",")) (IvarTypeIdentifier / "@outlet")
+
+IvarTypeIdentifier =
+    IdentifierName // for var
 
 IvarDeclaration =
     IvarIdentifier _ Accessors?
