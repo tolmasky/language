@@ -29,7 +29,13 @@ FunctionExpression =
     FUNCTION _ Identifier? _ "(" _ FormalParameterList? _ ")" _ "{" _ FunctionBody _ "}"
 
 FormalParameterList =
-    FunctionParameterIdentifier (_ "," _ FunctionParameterIdentifier)*
+    FunctionParameterIdentifier (_ FormalParameterListComma _ FunctionParameterIdentifier)* FormalParameterListELLIPSIS?
+
+FormalParameterListComma =
+    ","
+
+FormalParameterListELLIPSIS =
+    _ "," _ "..."
 
 FunctionParameterIdentifier =
     Identifier
@@ -321,17 +327,18 @@ MethodSignature =
     MethodReturnType _ MethodSelector
 
 MethodSelector =
-    KeywordSelector _ MethodELLIPSIS? / // Paramter type list?
+    KeywordSelector /
     SelectorLabel
 
-MethodELLIPSIS =
-    "," _ "..."
-
 KeywordSelector =
-    KeywordDeclarator (_ KeywordDeclarator)*
+    KeywordDeclarator (_ KeywordDeclarator)* (_ KeywordFormalParameterList)? /
+    KeywordFormalParameterList
 
 KeywordDeclarator =
-    SelectorLabelWithColon _ MethodParameter
+    SelectorLabelWithColon _ MethodParameter !(_ ",")
+
+KeywordFormalParameterList =
+    SelectorLabelWithColon _ MethodParameterType _ FormalParameterList
 
 MethodParameter =
     MethodParameterType _ MethodParameterIdentifier

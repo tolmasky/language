@@ -56,7 +56,7 @@ module.exports["InstanceMethodDeclaration"] =
         {
             "scope": { },
             "selector": "",
-            "types":[],
+            "types":["\"id\"", "\"SEL\""],
             "class-method": false
         });
     },
@@ -106,12 +106,22 @@ module.exports["MethodSignature"] =
 }
 
 module.exports["MethodParameterType"] =
-module.exports["MethodReturnType"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         if (aNode.innerText().length === 0)
             aContext.get("types").push("\"id\"");
+
+        splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["MethodReturnType"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        if (aNode.innerText().length === 0)
+            aContext.get("types").unshift("\"id\"");
 
         splices.push([aNode.range.location, aNode.range.length, ""]);
     }
@@ -142,7 +152,24 @@ module.exports["MethodParameterIdentifier"] =
     }
 }
 
-module.exports["MethodELLIPSIS"] =
+module.exports["KeywordFormalParameterList"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, 0, ","]);
+    }
+}
+
+module.exports["FormalParameterListComma"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        if (aContext.has("types", false))
+            aContext.get("types").push("\"id\"");
+    }
+}
+
+module.exports["FormalParameterListELLIPSIS"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {

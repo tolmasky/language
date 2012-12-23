@@ -1,8 +1,5 @@
 
-1. Clean Up
-    1.a. Deal with types
-    1.b. @accessors
-2. Superclass handler.
+1. Superclass handler.
 ---
-5. @{ key:value }
-6. @each
+2. @{ key:value }
+3. @each
