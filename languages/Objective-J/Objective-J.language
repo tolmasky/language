@@ -221,7 +221,7 @@ ClassDeclarationStatement =
     "@end" EOS
 
 ClassHeader =
-    "@implementation" _ ClassName _ (SuperclassDeclaration / CategoryDeclaration)?
+    "@implementation" _ ClassName (_ SuperclassDeclaration / CategoryDeclaration)?
 
 ClassMemberVariables =
     (_ CompoundIvarDeclaration)* _
@@ -266,16 +266,28 @@ AccessorsConfiguration =
     IvarPropertyName /
     IvarGetterName /
     IvarSetterName /
+    AccessorsReadonly
+
+AccessorsReadonly =
     "readonly"
 
 IvarPropertyName =
-    "property" _ "=" _ Identifier
+    "property" _ "=" _ AccessorsPropertySelector
+
+AccessorsPropertySelector =
+    SelectorLabel
 
 IvarGetterName =
-    "getter" _ "=" _ Identifier
+    "getter" _ "=" _ AccessorsGetterSelector
+
+AccessorsGetterSelector =
+    SelectorLabel
 
 IvarSetterName =
-    "setter" _ "=" _ Identifier (_ ":")?
+    "setter" _ "=" _ AccessorsSetterSelector
+
+AccessorsSetterSelector =
+    SelectorLabelWithColon
 
 ClassBody =
     ClassElements?

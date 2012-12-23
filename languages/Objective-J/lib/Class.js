@@ -143,17 +143,120 @@ module.exports["IvarTypeIdentifier"] =
     }
 }
 
+module.exports["Accessors"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        var getter = aContext.get("accessor-name");
+        var setter = "set" + getter.charAt(0).toUpperCase() + getter.substr(1) + ":";
+
+        aContext.set("accessors", { "getter": getter, "setter": setter });
+    },
+
+    exitedNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["AccessorsReadonly"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        var accessors = aContext.get("accessors");
+
+        delete accessors.setter;
+    }
+}
+
+function trimUnderscore(aString, isSetter)
+{
+    return aString.charAt(0) === "_" ? aString.substr(1) : aString;
+}
+
+module.exports["AccessorsGetterSelector"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        var getter = aNode.innerText();
+        var accessors = aContext.get("accessors");
+
+        accessors.getter = getter;
+    }
+}
+
+module.exports["AccessorsSetterSelector"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        var setter = aNode.innerText();
+        var accessors = aContext.get("accessors");
+
+        accessors.setter = aNode.innerText();
+    }
+}
+
+module.exports["AccessorsPropertySelector"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        var property = aNode.innerText();
+        var getter = trimUnderscore(property);
+        var accessors = aContext.get("accessors");
+
+        accessors.getter = getter;
+        accessors.setter = "set" + getter.charAt(0).toUpperCase() + getter.substr(1) + ":";
+    }
+}
+
+module.exports["IvarDeclaration"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location, 0, "class_addIvar(the_class, "]);
+
+        return new Context(aNode, aContext, { "accessor-name":"", "accessors":null });
+    },
+
+    exitedNode: function(aNode, aContext, splices)
+    {
+        var accessors = aContext.get("accessors");
+        var insertion = "";
+
+        if (accessors)
+        {
+            insertion += ", {";
+
+            if (accessors.setter)
+                insertion += " setter: \"" + accessors.setter + "\",";
+
+            if (accessors.getter)
+                insertion += " getter: \"" + accessors.getter + "\"";
+
+            insertion += " })";
+        }
+
+        splices.push([aNode.range.location + aNode.range.length, 0, insertion + ")"]);
+    }
+}
+
 module.exports["IvarIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         var ivarName = aNode.innerText();
 
+        aContext.set("accessor-name", trimUnderscore(ivarName));
         aContext.get("scope")[ivarName] = true;
 
         if (aContext.superClassName === "Nil")
             aContext.get("meta-scope")[ivarName] = true;
 
-        splices.push([aNode.range.location, aNode.range.length, "class_addIvar(the_class, \"" + ivarName + "\")"]);
+        splices.push([aNode.range.location, 0, "\""]);
+    },
+
+    exitedNode: function(aNode, aContext, splices)
+    {
+        splices.push([aNode.range.location + aNode.range.length, 0, "\""]);
     }
 }

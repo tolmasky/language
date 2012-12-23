@@ -96,7 +96,7 @@ module.exports["SelectorColon"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        if (!aContext.has("selector-literal", false))
+        if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + ":");
             splices.push([aNode.range.location, aNode.range.length, ""]);
@@ -109,7 +109,7 @@ module.exports["SelectorLabel"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        if (!aContext.has("selector-literal", false))
+        if (!aContext.has("selector-literal", false) && aContext.has("selector"))
         {
             aContext.set("selector", aContext.get("selector") + aNode.innerText());
             splices.push([aNode.range.location, aNode.range.length, ""]);
