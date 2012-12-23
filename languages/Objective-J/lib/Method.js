@@ -56,6 +56,7 @@ module.exports["InstanceMethodDeclaration"] =
         {
             "scope": { },
             "selector": "",
+            "types":[],
             "class-method": false
         });
     },
@@ -92,7 +93,9 @@ module.exports["MethodSignature"] =
                             aContext.get("generated-meta-class-variable") :
                             aContext.get("generated-class-variable");
 
-            return "class_addMethod(" + variable + ", \"" + aContext.get("selector") + "\", function(self, _cmd";
+            return "class_addMethod(" + variable + ", \"" +
+                    aContext.get("selector") + "\", [" +
+                    aContext.get("types").join(", ") + "], function(self, _cmd";
         }}]);
     },
 
@@ -102,11 +105,24 @@ module.exports["MethodSignature"] =
     }
 }
 
-module.exports["MethodType"] =
+module.exports["MethodParameterType"] =
+module.exports["MethodReturnType"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
+        if (aNode.innerText().length === 0)
+            aContext.get("types").push("\"id\"");
+
         splices.push([aNode.range.location, aNode.range.length, ""]);
+    }
+}
+
+module.exports["MethodParameterTypeIdentifier"] =
+module.exports["MethodReturnTypeIdentifier"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        aContext.get("types").push("\"" + aNode.innerText() +"\"");
     }
 }
 

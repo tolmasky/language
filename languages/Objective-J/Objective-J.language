@@ -318,7 +318,7 @@ MethodDeclaration =
     "{" _ FunctionBody _ "}"
 
 MethodSignature =
-    MethodType? _ MethodSelector
+    MethodReturnType _ MethodSelector
 
 MethodSelector =
     KeywordSelector _ MethodELLIPSIS? / // Paramter type list?
@@ -331,13 +331,29 @@ KeywordSelector =
     KeywordDeclarator (_ KeywordDeclarator)*
 
 KeywordDeclarator =
-    SelectorLabelWithColon MethodParameter
+    SelectorLabelWithColon _ MethodParameter
 
 MethodParameter =
-    (_ MethodType)? _ MethodParameterIdentifier
+    MethodParameterType _ MethodParameterIdentifier
 
 MethodParameterIdentifier =
     Identifier
+
+MethodReturnType =
+    ("(" _ MethodReturnTypeIdentifier _ ")")?
+
+MethodReturnTypeIdentifier =
+    (ACTION / IdentifierName) (_ (ACTION / IdentifierName))*
+
+MethodParameterType =
+    ("(" _ MethodParameterTypeIdentifier _ ")")?
+
+MethodParameterTypeIdentifier =
+    IdentifierName (_ IdentifierName)*
+
+ACTION  =
+    "@action" !IdentifierPart /
+    "IBAction" !IdentifierPart
 
 SelectorLabelWithColon =
     SelectorLabel? SelectorWhitespace SelectorColon
@@ -350,13 +366,6 @@ SelectorWhitespace =
 
 SelectorColon =
     ":"
-
-MethodType =
-    "(" _ (ACTION / IdentifierName) (_ (ACTION / IdentifierName))* _ ")"
-
-ACTION  =
-    "@action" !IdentifierPart /
-    "IBAction" !IdentifierPart
 
 //
 // 11 Expressions
