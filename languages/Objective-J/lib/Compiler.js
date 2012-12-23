@@ -63,17 +63,6 @@ function Context(aNode, aContext, data)
     this.data = data;
 }
 
-Context.prototype.owner = function(aProperty)
-{
-    if (hasOwnProperty.call(this.data, aProperty))
-        return this;
-
-    if (this.parentContext)
-        return this.parentContext.owner(aProperty);
-
-    return null;
-}
-
 Context.prototype.has = function(aProperty, shouldClimb)
 {
     if (hasOwnProperty.call(this.data, aProperty))
