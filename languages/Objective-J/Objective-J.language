@@ -227,7 +227,7 @@ ClassDeclarationStatement =
     "@end" EOS
 
 ClassHeader =
-    "@implementation" _ ClassName (_ SuperclassDeclaration / CategoryDeclaration)?
+    "@implementation" _ ClassName (_ (SuperclassDeclaration / CategoryDeclaration))?
 
 ClassMemberVariables =
     (_ CompoundIvarDeclaration)* _

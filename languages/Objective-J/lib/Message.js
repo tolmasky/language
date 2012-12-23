@@ -24,14 +24,12 @@ module.exports["MessageExpression"] =
                 if (receiver === RECEIVER_VARIABLE)
                     return "objj_msgSend(";
 
-                var result = "objj_msgSendSuper({ receiver:self, super_class:";
+                var result = "objj_msgSendSuper({ receiver:self, super_class:objj_get";
 
-                if (receiver === RECEIVER_SUPER)
-                    result += "objj_getClass(";
-                else
-                    result += "objj_getMetaClass(";
+                if (receiver === RECEIVER_SUPER_META)
+                    result += "Meta";
 
-                return result + "\"" + aContext.get("class-name") + "\").super_class }";
+                return result + "Class(\"" + messageContext.get("class-name") + "\").super_class }";
             }
         }]);
 

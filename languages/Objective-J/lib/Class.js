@@ -99,7 +99,7 @@ module.exports["ClassName"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        aContext.className = aNode.innerText();
+        aContext.set("class-name", aNode.innerText());
     }
 }
 
