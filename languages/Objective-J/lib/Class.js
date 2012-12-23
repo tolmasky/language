@@ -209,6 +209,14 @@ module.exports["AccessorsPropertySelector"] =
     }
 }
 
+module.exports["CompoundIvarDeclaration"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        return new Context(aNode, aContext, { "ivar-type": "" });
+    }
+}
+
 module.exports["IvarDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
@@ -221,7 +229,7 @@ module.exports["IvarDeclaration"] =
     exitedNode: function(aNode, aContext, splices)
     {
         var accessors = aContext.get("accessors");
-        var insertion = "";
+        var insertion = ", \"" + aContext.get("ivar-type") + "\"";
 
         if (accessors)
         {
@@ -233,10 +241,19 @@ module.exports["IvarDeclaration"] =
             if (accessors.getter)
                 insertion += " getter: \"" + accessors.getter + "\"";
 
-            insertion += " })";
+            insertion += " }";
         }
 
         splices.push([aNode.range.location + aNode.range.length, 0, insertion + ")"]);
+    }
+}
+
+module.exports["IvarTypeDeclaration"] =
+{
+    exitedNode: function(aNode, aContext, splices)
+    {
+        aContext.set("ivar-type", aNode.innerText());
+        splices.push([aNode.range.location, aNode.range.length, ""]);
     }
 }
 
