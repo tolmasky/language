@@ -360,8 +360,8 @@ HANDLERS["ObjectiveJLiteralMarker"] = { enteredNode: remove };
 
 // Import Statements.
 
-// Replace @import with objj_import(
-HANDLERS["ImportDirective"] = { enteredNode: replace("objj_import(") };
+// Replace @import with objj_executeFile(
+HANDLERS["ImportDirective"] = { enteredNode: replace("objj_executeFile(") };
 
 // Replace <> with "", NO);
 HANDLERS["StandardFilePath"] =
