@@ -1,21 +1,36 @@
 #!/usr/bin/env node
 
-var path = require('path');
-var fs   = require('fs');
-var lib  = path.join(path.dirname(fs.realpathSync(__filename)), '../lib');
-
-var Compiler = require(lib + "/Compiler.js");
-
-if(process.argv.length < 3)
+if (typeof system !== "undefined")
 {
-	console.error("Usage: node objjc.js filename");
+    var FILE = require("file");
+    var Compiler = require(FILE.join(FILE.dirname(module.path), "../lib/Compiler.js"));
+
+	var fileName = system.args[1];
+	var source = FILE.read(fileName, { charset: "UTF-8" });
+
+	var value = Compiler.compile(source);
+
+	print(value);
 }
 else
 {
-	var fileName = process.argv[2];
-	var source = fs.readFileSync(fileName, "UTF-8");
-	 
-	var value = Compiler.compile(source);
+    var path = require('path');
+    var fs   = require('fs');
+    var lib  = path.join(path.dirname(fs.realpathSync(__filename)), '../lib');
 
-	console.log(value);
+    var Compiler = require(lib + "/Compiler.js");
+
+    if(process.argv.length < 3)
+    {
+        console.error("Usage: node objjc.js filename");
+    }
+    else
+    {
+        var fileName = process.argv[2];
+        var source = fs.readFileSync(fileName, "UTF-8");
+
+        var value = Compiler.compile(source);
+
+        console.log(value);
+    }
 }

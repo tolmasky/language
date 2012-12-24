@@ -2,6 +2,9 @@
 var Parser = require("./Parser.js");
 var HANDLERS = { };
 
+if (!module.exports)
+    module.exports = exports;
+
 module.exports.compile = function(source)
 {
     var tree = Parser.parse(source),

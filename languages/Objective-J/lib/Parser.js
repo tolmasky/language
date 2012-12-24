@@ -382,5 +382,12 @@ SyntaxNode.prototype.traverse = function(walker)
 }
 
 
-module.exports = new Parser(compiledGrammar);
+if (typeof system !== "undefined")
+{
+    var parser = new Parser(compiledGrammar);
+
+    exports.parse = function(input) { return parser.parse(input); }
+}
+else
+    module.exports = new Parser(compiledGrammar);
 
