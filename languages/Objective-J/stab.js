@@ -30,50 +30,107 @@ function Context(aContext, rules)
     this.cache = { };
     this.recursive = { };
     this.index = -1;
+    this.forest = { };
 
-    if (aContext)
-    {
-        this.rules = aContext.rules;
-        this.index = aContext.index + 1;
-    }
+    SyntaxNodeMake(this, null, 0);
 }
 
-function SyntaxNode(context, parent, ruleUID)
+Context.prototype.clear = function()
 {
-    var UID = ruleUID + " " + context.index;
-    var node = context.cache[UID] || this;
+    this.cache = { };
+    this.incomplete = { };
+    this.index++;
+}
 
-    if (node === this)
+Context.prototype.printForest = function()
+{
+    var forest = this.forest,
+        index = 0;
+
+    for (var UID in forest)
+        if (hasOwnProperty.call(forest, UID))
+        {
+            console.log("TREE " + index++);
+            console.log(forest[UID].toString(""));
+        }
+}
+
+function SyntaxNode(aContext, aParent, aUID, aRule, aState, children)
+{
+    this.context = aContext;
+    this.UID = aUID;
+    this.rule = aRule;
+    this.state = aState === undefined ? INCOMPLETE : aState;
+    this.parents = { };
+    this.children = children ? children.slice() : [];
+
+    if (aParent)
     {
-        node.UID = UID;
-        node.state = INCOMPLETE;
-        node.rule = context.rules[ruleUID] || ruleUID;
-        node.children = [];
-        node.parents = { };
+        this.parents[aParent.UID] = aParent;
+    }
+    else
+        aContext.forest[aUID] = this;
+}
+
+function SyntaxNodeCopy(aNode, aParent, aUIDAddition)
+{
+    console.log("COPYING " + aNode.UID);
+    var copy = new SyntaxNode(aNode.context, aParent, aNode.UID + aUIDAddition, aNode.rule, aNode.state, aNode.children);
+
+    if (aParent)
+    {
+        var children = aParent.children;
+        var index = children.lastIndexOf(aNode);
+console.log("looking for " + aNode.UID + " in " + aParent.UID + " at " + index);
+        children[index] = copy;
+        console.log("found it!");
+        console.log(aParent + "");
     }
 
-    // Only add this parent if we haven't already accounted for it.
-    // This accounts for the user doing something silly like A / A
-    if (parent && !hasOwnProperty.call(node.parents, parent.UID))
-        node.parents[parent.UID] = parent;
+    return copy;
+}
 
-    if (node === this)
-        descend(context, node);
+function SyntaxNodeMake(aContext, aParent, aRuleUID)
+{
+    var UID = aRuleUID + " " + aContext.index;
+    var node = aContext.cache[UID];
+console.log("MAKING " + UID);
+    if (node)
+        node.parents[aParent.UID] = aParent;
+
+    else
+        node = new SyntaxNode(aContext, aParent, UID, aContext.rules[aRuleUID] || aRuleUID);
+
+    if (aParent)
+        aParent.children.push(node);
+
+    if (!aContext.cache[UID])
+    { 
+        aContext.cache[UID] = node;
+        descend(aContext, node);
+    }
 
     return node;
+}
+
+SyntaxNode.prototype.toSingleString = function()
+{
+    var rule = this.rule;
+    var meta = " (" + this.UID + ")[" + this.state + "] ";
+    var type = ["", "CHOICE", "SEQUENCE", "NOT", "AND", "NAME"][rule.type] || (rule === -1 ? "DOT" : rule);
+    var string = type + meta + (this.name || "");
+
+    return string;
 }
 
 SyntaxNode.prototype.toString = function(indentation)
 {
     indentation = indentation || "";
 
-    var rule = this.rule;
-    var meta = " (" + this.UID + ")[" + this.state + "] ";
-    var type = ["", "CHOICE", "SEQUENCE", "NOT", "AND", "NAME"][rule.type] || (rule === -1 ? "DOT" : rule);
-    var string = indentation + type + meta + (this.name || "") + "\n";
+    var string =  indentation + this.toSingleString();
 
     for (var index = 0, count = this.children.length; index < count; ++index)
-        string += this.children[index].toString(indentation + "   ");
+        string += "\n" + this.children[index].toString(indentation + "   ");
 
     return string;
 }
@@ -105,26 +162,97 @@ function descend(context, node)
     recursive[rule.UID] = true;
 
     if (rule.type === SEQUENCE)
-        node.children[0] = new SyntaxNode(context, node, rule.children[0]);
+        SyntaxNodeMake(context, node, rule.children[0]);
+
     else
-        node.children = rule.children.map(function (ruleUID) { return new SyntaxNode(context, node, ruleUID); });
+    {
+        console.log("NEED TO SPLIT");
+
+        var parentPaths = parentPathsForNode(node);
+        var bounded = [];
+        var children = node.rule.children;
+        var count = children.length;
+
+        while (count--)
+        {
+            var ruleUID = children[count];
+            console.log("RULE: " + ruleUID + "\n");
+
+            parentPaths.forEach(function(aParentPath)
+            {
+                var parent = null;
+
+                console.log("PATH: [" + aParentPath.map(function(e) { return e.UID; }).join(",") + "]");
+                aParentPath.forEach(function(aNode)
+                {
+                    if (!parent)
+                        delete context.forest[aNode.UID];
+
+                    parent = SyntaxNodeCopy(aNode, parent, " from (" + node.UID + ")@[" + count + "]");
+                });
+
+                console.log("-For " + parent.UID + "  count: " + bounded.length);
+                // WHAT?
+                parent.bounded = bounded;
+                bounded = bounded.concat(parent);
+
+                SyntaxNodeMake(context, parent, ruleUID);                
+            });
+        }
+//        node.children = rule.children.map(function (ruleUID) { return new SyntaxNode(context, node, ruleUID); });
+//        var nodes = split();
+    }
 
     // Now unregister ourselves.
     delete recursive[rule.UID];
 }
 
-function setState(aContext, aNode, aState)
+function parentPathsForNode(aNode)
 {
+    var parents = aNode.parents,
+        parentPaths = [];
+
+    for (var UID in parents)
+        if (hasOwnProperty.call(parents, UID))
+        {
+            var parent = parents[UID],
+                grandparentPaths = parentPathsForNode(parent);
+            
+            grandparentPaths.forEach(function(aGrandparentPath)
+            {
+                parentPaths.push(aGrandparentPath.concat(aNode));
+            });
+        }
+
+    if (parentPaths.length === 0)
+        parentPaths.push([aNode]);
+
+    return parentPaths; 
+}
+
+function setState(aContext, aNode, aState)
+{console.log("conclusing: " + aNode.UID + " " + (hasOwnProperty.call(aNode.rule, "UID") ? aNode.rule.UID : aNode.rule) + " " + aNode.bounded);
     aNode.state = aState;
 
     if (aState === FAIL)
+    {
         aNode.children.length = 0;
+
+        if (aContext.forest[aNode.UID])
+            delete aContext.forest[aNode.UID];
+    }
+    else if (aState === SUCCESS && aNode.bounded){
+    console.log("in here " + aNode.bounded.length);
+        aNode.bounded.forEach(function(aNode)
+        {console.log("NO NEED TO BOTHER WITH: " + aNode.UID);
+            setState(aContext, aNode, FAIL);
+        });}
 
 //    console.log(["FAILED", "SUCCEEDED", "INCOMPLETE"][aNode.state] + aNode.UID + " " + aNode.children.length);
 
     var parents = aNode.parents;
 
-    for (UID in parents)
+    for (var UID in parents)
         if (hasOwnProperty.call(parents, UID))
             climb(parents[UID], aContext);
 }
@@ -216,7 +344,7 @@ function climb(node, context)
         if (count === rule.children.length)
             return setState(context, node, SUCCESS);
 
-        children[count] = new SyntaxNode(context, node, rule.children[count]);
+        SyntaxNodeMake(context, node, rule.children[count]);
 
         return;
     }
@@ -245,19 +373,17 @@ function climb(node, context)
 function parse(context, character)
 {
     var incomplete = context.incomplete;
-    var newContext = new Context(context);
-    var UID;
 
-    for (UID in incomplete)
+    context.clear();
+
+    for (var UID in incomplete)
         if (hasOwnProperty.call(incomplete, UID))
         {
             var node = incomplete[UID];
             var state = (node.rule === DOT || character === node.rule) ? SUCCESS : FAIL;
 
-            setState(newContext, node, state);
+            setState(context, node, state);
         }
-
-    return newContext;
 }
 
 /*
@@ -279,27 +405,26 @@ function parse(context, character)
 //left recursion through --> wehn done, re-adopt and move.
 */
 
-var test = require("./ptests.js")[3];
+var test = require("./ptests.js")[1];
 var source = test.source;
 var rules = test.rules;
 
 var time = new Date();
 var context = new Context(null, rules);
-var start = new SyntaxNode(context, null, 0);
 
-console.log("PREPARSE [" + -1 + "] = \"\"\n");
-console.log(start.toString());
+console.log("PARSING [" + -1 + "] = \"\"\n");
+context.printForest();
 
 var index = 0,
-    count = source.length;
+    count = source.length + 1;
 
 for (; index < count; ++index)
 {
-    console.log("\nPARSING [" + index + "] = \"" + source[index] + "\"\n");
-    context = parse(context, source[index]);
-    console.log(start.toString());
+    console.log("\nPARSING [" + index + "] = \"" + 
+                (index === count ? "EOF" : source.charAt(index)) +
+                "\"-----------------\n");
+    parse(context, index === count ? EOF : source.charAt(index));
+    context.printForest();
 }
 
-console.log("\nPARSING [" + (index + 1) + "] = EOF\n");
-context = parse(context, EOF);
 console.log(new Date() - time);

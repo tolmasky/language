@@ -10,7 +10,7 @@ var CHARACTER   = 0,
 module.exports =  [
     // r = (bcc / b) cd
     {
-        source: "bcd",
+        source: "bcccd",
         rules:  [
                     { UID:0, type:SEQUENCE, children:[2, 1] },
                     { UID:1, type:SEQUENCE, children:["c", "d"] },
@@ -19,6 +19,27 @@ module.exports =  [
                     { UID:4, type:SEQUENCE, children:["c", "c"] }
                 ],
     },
+
+    // r = a (b / c)
+    {
+        source: "ab",
+        rules:  [
+                    { UID:0, type:SEQUENCE, children:["a", 1] },
+                    { UID:1, type:CHOICE, children:["b", "c"] }
+                ]
+    },
+
+    // r = a (b ( (c / d) / e ) )
+    {
+        source: "abe",
+        rules:  [
+                    { UID:0, type:SEQUENCE, children:["a", 1] },
+                    { UID:1, type:SEQUENCE, children:["b", 2] },
+                    { UID:2, type:CHOICE, children:[3, "e"] },
+                    { UID:3, type:CHOICE, children:["b", "c"] }
+                ],
+    },
+    
     
     {
         source: "bcd",
