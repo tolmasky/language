@@ -272,7 +272,11 @@ AccessorsConfiguration =
     IvarPropertyName /
     IvarGetterName /
     IvarSetterName /
-    AccessorsReadonly
+    AccessorsReadonly /
+    AccessorsCopy
+
+AccessorsCopy =
+    "copy"
 
 AccessorsReadonly =
     "readonly"

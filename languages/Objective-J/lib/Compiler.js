@@ -240,7 +240,7 @@ HANDLERS["Accessors"] =
         var getter = aContext.get("accessor-name");
         var setter = "set" + getter.charAt(0).toUpperCase() + getter.substr(1) + ":";
 
-        aContext.set("accessors", { "getter": getter, "setter": setter });
+        aContext.set("accessors", { "getter": getter, "setter": setter, "copy": false });
         remove(aNode, aContext, splices);
     }
 }
@@ -287,6 +287,14 @@ HANDLERS["AccessorsPropertySelector"] =
     }
 }
 
+HANDLERS["AccessorsCopy"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        aContext.get("accessors").copy = true;
+    }
+}
+
 HANDLERS["CompoundIvarDeclaration"] =
 {
     enteredNode: function(aNode, aContext, splices)
@@ -311,15 +319,18 @@ HANDLERS["IvarDeclaration"] =
 
         if (accessors)
         {
-            insertion += ", {";
+            var include = [];
 
             if (accessors.setter)
-                insertion += " setter: \"" + accessors.setter + "\",";
+                include.push("setter: \"" + accessors.setter + "\"");
 
             if (accessors.getter)
-                insertion += " getter: \"" + accessors.getter + "\"";
+                include.push("getter: \"" + accessors.getter + "\"");
 
-            insertion += " }";
+            if (accessors.copy)
+                include.push("copy: true");
+
+            insertion += ", { " + include.join(", ") + " }";
         }
 
         append(insertion + ")")(aNode, aContext, splices);

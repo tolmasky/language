@@ -120,7 +120,7 @@ function evaluate(context, parent, rules, rule_id)
         case CHARACTER_CLASS:
             var character = context.input.charAt(context.position);
 
-            if (typeof rule[1] !== "function")
+            if (typeof rule[1] !== "function" && typeof rule[1] !== "object")
                 rule[1] = new RegExp(rule[1], "g");
 
             if (character.match(rule[1]))
