@@ -34,25 +34,18 @@ module.exports.compile = function(source)
 
     // "Hand splicing" is much faster than calling splice each time...
     var index = 0;
-        count = splices.length,
-        characters = source.split("");
+    var count = splices.length;
+    var result = "";
+    var cursor = 0;
 
     for (; index < count; ++index)
     {
-        var splice = splices[index],
-            start = splice[0],
-            stop = start + splice[1];
-
-        for (; start < stop; ++start)
-            characters[start] = "";
-
-        if (stop - 1 < 0)
-            characters[0] = splice[2] + characters[0];
-        else
-            characters[stop - 1] += splice[2];
+        var splice = splices[index];
+        result += source.substring(cursor, splice[0]) + splice[2];
+        cursor = splice[0] + splice[1];
     }
 
-    var result = characters.join("");
+    result += source.substr(cursor);
 
     return result;
 }
