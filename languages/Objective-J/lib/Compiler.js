@@ -2,16 +2,17 @@
 var Parser = require("./Parser.js");
 var HANDLERS = { };
 
-if (!module.exports)
-    module.exports = exports;
+if (typeof "exports" === "undefined")
+    var exports = module.exports;
 
-module.exports.compile = function(source)
+exports.parse = function(aString) { return Parser.parse(aString); }
+
+exports.compile = function(/*Node*/ aParseTree)
 {
-    var tree = Parser.parse(source),
-        splices = [],
-        context = new Context(null, null, { "global": true, "scope": { } });
+    var splices = [],
+        context = new Context(null, null, { "global": true, "scope": { }, "source":aParseTree.source, "dependencies":[], "splices":splices });
 
-    tree.traverse({
+    aParseTree.traverse({
         traversesTextNodes : false,
         enteredNode : function(aNode)
 		{
@@ -32,7 +33,14 @@ module.exports.compile = function(source)
         }
 	});
 
+    return context;
+}
+
+exports.translate = function(/*Context*/ aContext, /*Object*/ classes)
+{
     // "Hand splicing" is much faster than calling splice each time...
+    var source = aContext.get("source");
+    var splices = aContext.get("splices");
     var index = 0;
     var count = splices.length;
     var result = "";
@@ -41,7 +49,12 @@ module.exports.compile = function(source)
     for (; index < count; ++index)
     {
         var splice = splices[index];
-        result += source.substring(cursor, splice[0]) + splice[2];
+        var insertion = splice[2];
+
+        if (typeof insertion !== "string")
+            insertion = insertion(classes);
+
+        result += source.substring(cursor, splice[0]) + insertion;
         cursor = splice[0] + splice[1];
     }
 
@@ -418,7 +431,7 @@ HANDLERS["MethodSignature"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location, 0, { toString:function()
+        splices.push([aNode.range.location, 0, function()
         {
             var variable =  aContext.get("class-method") ?
                             aContext.get("generated-meta-class-variable") :
@@ -427,7 +440,7 @@ HANDLERS["MethodSignature"] =
             return "class_addMethod(" + variable + ", \"" +
                     aContext.get("selector") + "\", [" +
                     aContext.get("types").join(", ") + "], function(self, _cmd";
-        }}]);
+        }]);
     },
 
     exitedNode: append(")")
@@ -513,7 +526,7 @@ HANDLERS["IdentifierExpression"] =
 {
     exitedNode: function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location, 0, { toString:function()
+        splices.push([aNode.range.location, 0, function()
         {
             var identifier = aNode.innerText();
 
@@ -540,7 +553,7 @@ HANDLERS["IdentifierExpression"] =
                 return "self.";
 
             return "";
-        }}]);
+        }]);
     }
 }
 
@@ -577,22 +590,19 @@ HANDLERS["MessageExpression"] =
             "receiver": RECEIVER_VARIABLE
         });
 
-        splices.push([aNode.range.location, 1,
+        splices.push([aNode.range.location, 1, function()
         {
-            toString:function()
-            {
-                var receiver = messageContext.get("receiver");
+            var receiver = messageContext.get("receiver");
 
-                if (receiver === RECEIVER_VARIABLE)
-                    return "objj_msgSend(";
+            if (receiver === RECEIVER_VARIABLE)
+                return "objj_msgSend(";
 
-                var result = "objj_msgSendSuper({ receiver:self, super_class:objj_get";
+            var result = "objj_msgSendSuper({ receiver:self, super_class:objj_get";
 
-                if (receiver === RECEIVER_SUPER_META)
-                    result += "Meta";
+            if (receiver === RECEIVER_SUPER_META)
+                result += "Meta";
 
-                return result + "Class(\"" + messageContext.get("class-name") + "\").super_class }";
-            }
+            return result + "Class(\"" + messageContext.get("class-name") + "\").super_class }";
         }]);
 
         return messageContext;
@@ -608,17 +618,14 @@ HANDLERS["SelectorCall"] =
 {
     enteredNode : function(aNode, aContext, splices)
     {
-        splices.push([aNode.range.location, 0,
+        splices.push([aNode.range.location, 0, function()
         {
-            toString:function()
-            {
-                var selector = aContext.get("selector");
+            var selector = aContext.get("selector");
 
-                if (selector.length)
-                    return ", \"" + selector + "\"";
+            if (selector.length)
+                return ", \"" + selector + "\"";
 
-                return "";
-            }
+            return "";
         }]);
     }
 }

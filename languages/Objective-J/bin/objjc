@@ -8,9 +8,11 @@ if (typeof system !== "undefined")
 	var fileName = system.args[1];
 	var source = FILE.read(fileName, { charset: "UTF-8" });
 
-	var value = Compiler.compile(source);
+    var tree = Compiler.parse(source);
+    var context = Compiler.compile(tree);
+    var translation = Compiler.translate(context, {});
 
-	print(value);
+    print(translation);
 }
 else
 {
@@ -29,8 +31,10 @@ else
         var fileName = process.argv[2];
         var source = fs.readFileSync(fileName, "UTF-8");
 
-        var value = Compiler.compile(source);
+        var tree = Compiler.parse(source);
+        var context = Compiler.compile(tree);
+        var translation = Compiler.translate(context, { });
 
-        console.log(value);
+        console.log(translation);
     }
 }
