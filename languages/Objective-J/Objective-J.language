@@ -227,10 +227,13 @@ ClassDeclarationStatement =
     ClassHeader _
     ("{" ClassMemberVariables "}")? _
     ClassBody _
-    "@end" EOS
+    ClassEnd EOS
 
 ClassHeader =
     "@implementation" _ ClassName (_ (SuperclassDeclaration / CategoryDeclaration))?
+
+ClassEnd =
+    "@end"
 
 ClassMemberVariables =
     (_ CompoundIvarDeclaration)* _

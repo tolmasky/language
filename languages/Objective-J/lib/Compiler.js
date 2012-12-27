@@ -198,6 +198,8 @@ HANDLERS["ClassHeader"] =
     }
 };
 
+HANDLERS["ClassEnd"] = { enteredNode: remove };
+
 HANDLERS["ClassName"] =
 {
     enteredNode: function(aNode, aContext, splices)
