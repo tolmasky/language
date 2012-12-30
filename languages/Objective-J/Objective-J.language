@@ -599,10 +599,10 @@ PropertyAssignment =
     PropertySetter
 
 PropertyGetter =
-    "get" _ PropertyName _ "(" _ ")" _ "{" _ FunctionBody _ "}"
+    GET _ PropertyName _ "(" _ ")" _ "{" _ FunctionBody _ "}"
 
 PropertySetter =
-    "set" _ PropertyName _ "(" _ PropertySetParameterList _ ")" _ "{" _ FunctionBody _ "}"
+    SET _ PropertyName _ "(" _ PropertySetParameterList _ ")" _ "{" _ FunctionBody _ "}"
 
 PropertyName =
     IdentifierName /
@@ -1003,3 +1003,8 @@ TRY =
 	"try" !(IdentifierPart)
 WITH =
 	"with" !(IdentifierPart)
+GET =
+    "get" !(IdentifierPart)
+
+SET =
+    "set" !(IdentifierPart)
