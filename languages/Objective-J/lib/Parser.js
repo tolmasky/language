@@ -12,8 +12,6 @@ function Parser(/*String | CompiledGrammar*/ aGrammar)
     return this;
 }
 
-module.exports = Parser;
-
 Parser.prototype.parse = function(input)
 {
     return parse(this.compiledGrammar, input);
@@ -381,13 +379,9 @@ SyntaxNode.prototype.traverse = function(walker)
         walker.exitedNode(this);
 }
 
+if (typeof "exports" === "undefined")
+    var exports = module.exports;
 
-if (typeof system !== "undefined")
-{
-    var parser = new Parser(compiledGrammar);
+var parser = new Parser(compiledGrammar);
 
-    exports.parse = function(input) { return parser.parse(input); }
-}
-else
-    module.exports = new Parser(compiledGrammar);
-
+exports.parse = function(input) { return parser.parse(input); }

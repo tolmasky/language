@@ -4,11 +4,12 @@ if (typeof system !== "undefined")
 {
     var FILE = require("file");
     var Compiler = require(FILE.join(FILE.dirname(module.path), "../lib/Compiler.js"));
+    var parse = require(FILE.join(FILE.dirname(module.path), "../lib/Parser.js")).parse;
 
 	var fileName = system.args[1];
 	var source = FILE.read(fileName, { charset: "UTF-8" });
 
-    var tree = Compiler.parse(source);
+    var tree = parse(source);
     var context = Compiler.compile(tree);
     var translation = Compiler.translate(context, {});
 
@@ -20,6 +21,7 @@ else
     var fs   = require('fs');
     var lib  = path.join(path.dirname(fs.realpathSync(__filename)), '../lib');
 
+    var parse = require(lib + "/Parser.js").parse;
     var Compiler = require(lib + "/Compiler.js");
 
     if(process.argv.length < 3)
@@ -31,7 +33,7 @@ else
         var fileName = process.argv[2];
         var source = fs.readFileSync(fileName, "UTF-8");
 
-        var tree = Compiler.parse(source);
+        var tree = parse(source);
         var context = Compiler.compile(tree);
         var translation = Compiler.translate(context, { });
 

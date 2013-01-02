@@ -1,11 +1,8 @@
 
-var Parser = require("./Parser.js");
 var HANDLERS = { };
 
 if (typeof "exports" === "undefined")
     var exports = module.exports;
-
-exports.parse = function(aString) { return Parser.parse(aString); }
 
 exports.compile = function(/*Node*/ aParseTree)
 {
