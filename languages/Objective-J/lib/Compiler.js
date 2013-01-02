@@ -535,7 +535,7 @@ HANDLERS["IdentifierExpression"] =
                 return "";
 
             // Find which context's scope contains this identifier.
-            var context = findContextWithIdentifierInScope(aContext, aNode.innerText());
+            var context = findContextWithIdentifierInScope(aContext, identifier);
 
             if (!context || context.has("global", false))
             {
@@ -544,7 +544,7 @@ HANDLERS["IdentifierExpression"] =
                 var report = aNode.report(),
                     message = "Line: " + report.lineNumber + "\n" + report.visualization + "\n";
 
-                message += "Warning: " + aNode.innerText() + " is global.";
+                message += "Warning: " + identifier + " is global.";
 
                 console.log(message);
             }
