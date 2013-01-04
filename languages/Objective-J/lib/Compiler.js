@@ -464,11 +464,19 @@ HANDLERS["MethodReturnType"] =
 }
 
 HANDLERS["MethodParameterTypeIdentifier"] =
-HANDLERS["MethodReturnTypeIdentifier"] =
 {
     enteredNode: function(aNode, aContext, splices)
     {
         aContext.get("types").push("\"" + aNode.innerText() +"\"");
+    }
+}
+
+// We need to explicitly use unshift because types already contains "id" and "SEL"
+HANDLERS["MethodReturnTypeIdentifier"] =
+{
+    enteredNode: function(aNode, aContext, splices)
+    {
+        aContext.get("types").unshift("\"" + aNode.innerText() +"\"");
     }
 }
 
