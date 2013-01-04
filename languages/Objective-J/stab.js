@@ -21,14 +21,18 @@ var FAIL        = 0,
     SUCCESS     = 1,
     INCOMPLETE  = 2;
 
-var EOF         = { };
+var EOF         = { toString: function() { return "EOF"; } };
+
+function TRACE(x)
+{
+    console.log(x);
+}
 
 function Context(aContext, rules)
 {
     this.rules = rules;
     this.incomplete = { };
     this.cache = { };
-    this.recursive = { };
     this.index = -1;
     this.forest = { };
 
@@ -50,8 +54,8 @@ Context.prototype.printForest = function()
     for (var UID in forest)
         if (hasOwnProperty.call(forest, UID))
         {
-            console.log("TREE " + index++);
-            console.log(forest[UID].toString(""));
+            TRACE("TREE " + index++);
+            TRACE(forest[UID].toString(""));
         }
 }
 
@@ -74,17 +78,17 @@ function SyntaxNode(aContext, aParent, aUID, aRule, aState, children)
 
 function SyntaxNodeCopy(aNode, aParent, aUIDAddition)
 {
-    console.log("COPYING " + aNode.UID);
+    TRACE("COPYING " + aNode.UID);
     var copy = new SyntaxNode(aNode.context, aParent, aNode.UID + aUIDAddition, aNode.rule, aNode.state, aNode.children);
 
     if (aParent)
     {
         var children = aParent.children;
         var index = children.lastIndexOf(aNode);
-console.log("looking for " + aNode.UID + " in " + aParent.UID + " at " + index);
+        TRACE("looking for " + aNode.UID + " in " + aParent.UID + " at " + index);
         children[index] = copy;
-        console.log("found it!");
-        console.log(aParent + "");
+        TRACE("found it!");
+        TRACE(aParent + "");
     }
 
     return copy;
@@ -94,7 +98,7 @@ function SyntaxNodeMake(aContext, aParent, aRuleUID)
 {
     var UID = aRuleUID + " " + aContext.index;
     var node = aContext.cache[UID];
-console.log("MAKING " + UID);
+TRACE("MAKING " + UID);
     if (node)
         node.parents[aParent.UID] = aParent;
 
@@ -140,15 +144,15 @@ function descend(context, node)
     var UID = node.UID;
     var rule = node.rule;
 
-    // If this is a character, there is nothing we can do during the fall stage.
-    // Simply store it in the incomplete hash and return.
+    // The empty string always trivially succeeds, and consumes no input.
+    if (rule === "")
+        return setState(context, node, SUCCESS);
+
+    // If this is a leaf node (character or dot), there is nothing we can do during
+    // the fall stage. Simply store it in the incomplete hash and return.
     if (typeof rule === "string" || rule === DOT)
     {
-        // The empty string always trivially succeeds, and consumes no input.
-        if (rule === "")
-            climb(node, context);
-        else
-            context.incomplete[UID] = node;
+        context.incomplete[UID] = node;
 
         return;
     }
@@ -156,17 +160,12 @@ function descend(context, node)
     if (rule.type === NAME)
         node.name = rule.name;
 
-    var recursive = context.recursive;
-
-    // Before handling our children, make sure we register ourselves so we don't get handled again.
-    recursive[rule.UID] = true;
-
     if (rule.type === SEQUENCE)
         SyntaxNodeMake(context, node, rule.children[0]);
 
     else
     {
-        console.log("NEED TO SPLIT");
+        TRACE("NEED TO SPLIT");
 
         var parentPaths = parentPathsForNode(node);
         var bounded = [];
@@ -176,13 +175,13 @@ function descend(context, node)
         while (count--)
         {
             var ruleUID = children[count];
-            console.log("RULE: " + ruleUID + "\n");
+            TRACE("RULE: " + ruleUID + "\n");
 
             parentPaths.forEach(function(aParentPath)
             {
                 var parent = null;
 
-                console.log("PATH: [" + aParentPath.map(function(e) { return e.UID; }).join(",") + "]");
+                TRACE("PATH: [" + aParentPath.map(function(e) { return e.UID; }).join(",") + "]");
                 aParentPath.forEach(function(aNode)
                 {
                     if (!parent)
@@ -191,7 +190,7 @@ function descend(context, node)
                     parent = SyntaxNodeCopy(aNode, parent, " from (" + node.UID + ")@[" + count + "]");
                 });
 
-                console.log("-For " + parent.UID + "  count: " + bounded.length);
+                TRACE("-For " + parent.UID + "  count: " + bounded.length);
                 // WHAT?
                 parent.bounded = bounded;
                 bounded = bounded.concat(parent);
@@ -202,9 +201,6 @@ function descend(context, node)
 //        node.children = rule.children.map(function (ruleUID) { return new SyntaxNode(context, node, ruleUID); });
 //        var nodes = split();
     }
-
-    // Now unregister ourselves.
-    delete recursive[rule.UID];
 }
 
 function parentPathsForNode(aNode)
@@ -231,7 +227,8 @@ function parentPathsForNode(aNode)
 }
 
 function setState(aContext, aNode, aState)
-{console.log("conclusing: " + aNode.UID + " " + (hasOwnProperty.call(aNode.rule, "UID") ? aNode.rule.UID : aNode.rule) + " " + aNode.bounded);
+{
+    TRACE("conclusing: " + aNode.UID + " " + (hasOwnProperty.call(aNode.rule, "UID") ? aNode.rule.UID : aNode.rule) + " " + aNode.bounded);
     aNode.state = aState;
 
     if (aState === FAIL)
@@ -241,14 +238,17 @@ function setState(aContext, aNode, aState)
         if (aContext.forest[aNode.UID])
             delete aContext.forest[aNode.UID];
     }
-    else if (aState === SUCCESS && aNode.bounded){
-    console.log("in here " + aNode.bounded.length);
+    else if (aState === SUCCESS && aNode.bounded)
+    {
+        TRACE("in here " + aNode.bounded.length);
         aNode.bounded.forEach(function(aNode)
-        {console.log("NO NEED TO BOTHER WITH: " + aNode.UID);
+        {
+            TRACE("NO NEED TO BOTHER WITH: " + aNode.UID);
             setState(aContext, aNode, FAIL);
-        });}
+        });
+    }
 
-//    console.log(["FAILED", "SUCCEEDED", "INCOMPLETE"][aNode.state] + aNode.UID + " " + aNode.children.length);
+//    TRACE(["FAILED", "SUCCEEDED", "INCOMPLETE"][aNode.state] + aNode.UID + " " + aNode.children.length);
 
     var parents = aNode.parents;
 
@@ -412,7 +412,7 @@ var rules = test.rules;
 var time = new Date();
 var context = new Context(null, rules);
 
-console.log("PARSING [" + -1 + "] = \"\"\n");
+TRACE("PARSING [" + -1 + "] = \"\"\n");
 context.printForest();
 
 var index = 0,
@@ -420,10 +420,10 @@ var index = 0,
 
 for (; index < count; ++index)
 {
-    console.log("\nPARSING [" + index + "] = \"" + 
-                (index === count ? "EOF" : source.charAt(index)) +
-                "\"-----------------\n");
-    parse(context, index === count ? EOF : source.charAt(index));
+    TRACE(  "\nPARSING [" + index + "] = \"" + 
+            (source.charAt(index) || EOF) +
+            "\" -----------------\n");
+    parse(context, source.charAt(index) || EOF);
     context.printForest();
 }
 
