@@ -69,9 +69,8 @@ function SyntaxNode(aContext, aParent, aUID, aRule, aState, children)
     this.children = children ? children.slice() : [];
 
     if (aParent)
-    {
         this.parents[aParent.UID] = aParent;
-    }
+
     else
         aContext.forest[aUID] = this;
 }
@@ -98,7 +97,8 @@ function SyntaxNodeMake(aContext, aParent, aRuleUID)
 {
     var UID = aRuleUID + " " + aContext.index;
     var node = aContext.cache[UID];
-TRACE("MAKING " + UID);
+
+    TRACE("MAKING " + UID);
     if (node)
         node.parents[aParent.UID] = aParent;
 
@@ -109,7 +109,7 @@ TRACE("MAKING " + UID);
         aParent.children.push(node);
 
     if (!aContext.cache[UID])
-    { 
+    {
         aContext.cache[UID] = node;
         descend(aContext, node);
     }
@@ -148,58 +148,56 @@ function descend(context, node)
     if (rule === "")
         return setState(context, node, SUCCESS);
 
-    // If this is a leaf node (character or dot), there is nothing we can do during
-    // the fall stage. Simply store it in the incomplete hash and return.
+    // If this is a leaf node (character or dot), there is nothing we can
+    // do during the descend stage. Simply store it in the incomplete hash
+    // and return.
     if (typeof rule === "string" || rule === DOT)
     {
         context.incomplete[UID] = node;
-
         return;
     }
 
     if (rule.type === NAME)
+    {
         node.name = rule.name;
+        return;
+    }
 
     if (rule.type === SEQUENCE)
-        SyntaxNodeMake(context, node, rule.children[0]);
+        return SyntaxNodeMake(context, node, rule.children[0]);
 
-    else
+    TRACE("NEED TO SPLIT");
+
+    var parentPaths = parentPathsForNode(node);
+    var bounded = [];
+    var children = node.rule.children;
+    var count = children.length;
+
+    while (count--)
     {
-        TRACE("NEED TO SPLIT");
+        var ruleUID = children[count];
+        TRACE("RULE: " + ruleUID + "\n");
 
-        var parentPaths = parentPathsForNode(node);
-        var bounded = [];
-        var children = node.rule.children;
-        var count = children.length;
-
-        while (count--)
+        parentPaths.forEach(function(aParentPath)
         {
-            var ruleUID = children[count];
-            TRACE("RULE: " + ruleUID + "\n");
+            var parent = null;
 
-            parentPaths.forEach(function(aParentPath)
+            TRACE("PATH: [" + aParentPath.map(function(e) { return e.UID; }).join(",") + "]");
+            aParentPath.forEach(function(aNode)
             {
-                var parent = null;
+                if (!parent)
+                    delete context.forest[aNode.UID];
 
-                TRACE("PATH: [" + aParentPath.map(function(e) { return e.UID; }).join(",") + "]");
-                aParentPath.forEach(function(aNode)
-                {
-                    if (!parent)
-                        delete context.forest[aNode.UID];
-
-                    parent = SyntaxNodeCopy(aNode, parent, " from (" + node.UID + ")@[" + count + "]");
-                });
-
-                TRACE("-For " + parent.UID + "  count: " + bounded.length);
-                // WHAT?
-                parent.bounded = bounded;
-                bounded = bounded.concat(parent);
-
-                SyntaxNodeMake(context, parent, ruleUID);                
+                parent = SyntaxNodeCopy(aNode, parent, " from (" + node.UID + ")@[" + count + "]");
             });
-        }
-//        node.children = rule.children.map(function (ruleUID) { return new SyntaxNode(context, node, ruleUID); });
-//        var nodes = split();
+
+            TRACE("-For " + parent.UID + "  count: " + bounded.length);
+            // WHAT?
+            parent.bounded = bounded;
+            bounded = bounded.concat(parent);
+
+            SyntaxNodeMake(context, parent, ruleUID);
+        });
     }
 }
 
@@ -213,7 +211,7 @@ function parentPathsForNode(aNode)
         {
             var parent = parents[UID],
                 grandparentPaths = parentPathsForNode(parent);
-            
+
             grandparentPaths.forEach(function(aGrandparentPath)
             {
                 parentPaths.push(aGrandparentPath.concat(aNode));
@@ -223,7 +221,7 @@ function parentPathsForNode(aNode)
     if (parentPaths.length === 0)
         parentPaths.push([aNode]);
 
-    return parentPaths; 
+    return parentPaths;
 }
 
 function setState(aContext, aNode, aState)
@@ -420,7 +418,7 @@ var index = 0,
 
 for (; index < count; ++index)
 {
-    TRACE(  "\nPARSING [" + index + "] = \"" + 
+    TRACE(  "\nPARSING [" + index + "] = \"" +
             (source.charAt(index) || EOF) +
             "\" -----------------\n");
     parse(context, source.charAt(index) || EOF);
